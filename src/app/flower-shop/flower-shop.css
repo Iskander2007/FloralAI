@@ -1,0 +1,406 @@
+.flower-page {
+    min-height: 100vh;
+    padding: 0 30px 56px;
+    background:
+        radial-gradient(ellipse at 8% 38%, #e7eee3 0, transparent 32%),
+        radial-gradient(ellipse at 88% 9%, #f1e7e6 0, transparent 29%),
+        #f8f8f5;
+}
+
+.flower-header {
+    height: 72px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid #e5e7e2;
+}
+
+.flower-back,
+.flower-back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: #565e58;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.flower-demo-badge,
+.flower-kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    color: #617467;
+    font-size: 9px;
+    font-weight: 750;
+    letter-spacing: 1px;
+}
+
+.flower-demo-badge i,
+.flower-chat-header small i {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #7eaa80;
+}
+
+.flower-layout {
+    width: min(100%, 1100px);
+    margin: 66px auto 0;
+    display: grid;
+    grid-template-columns: minmax(0, .95fr) minmax(370px, 1.05fr);
+    gap: clamp(38px, 7vw, 88px);
+    align-items: start;
+}
+
+.flower-intro {
+    padding-top: 18px;
+}
+
+.flower-kicker {
+    color: #677d68;
+}
+
+.flower-intro h1 {
+    margin: 19px 0 14px;
+    color: #27312b;
+    font-family: var(--serif);
+    font-size: clamp(36px, 4.5vw, 53px);
+    font-weight: 500;
+    letter-spacing: -1.5px;
+    line-height: 1.1;
+}
+
+.flower-intro > p {
+    max-width: 440px;
+    margin: 0;
+    color: #727b73;
+    font-size: 13px;
+    line-height: 1.8;
+}
+
+.flower-catalog {
+    margin-top: 36px;
+}
+
+.flower-catalog h2 {
+    margin: 0 0 10px;
+    color: #737b74;
+    font-size: 9px;
+    font-weight: 750;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.flower-product {
+    min-height: 69px;
+    display: grid;
+    grid-template-columns: 30px 1fr auto;
+    align-items: center;
+    gap: 10px;
+    border-top: 1px solid #e4e7e1;
+}
+
+.flower-product:last-of-type {
+    border-bottom: 1px solid #e4e7e1;
+}
+
+.flower-number {
+    color: #a2aca1;
+    font-size: 10px;
+    font-weight: 650;
+}
+
+.flower-product div {
+    display: grid;
+    gap: 4px;
+}
+
+.flower-product b,
+.flower-product strong {
+    color: #313a33;
+    font-size: 11px;
+    font-weight: 640;
+}
+
+.flower-product small {
+    color: #858d85;
+    font-size: 9px;
+}
+
+.flower-disclosure {
+    margin: 12px 0 0;
+    color: #818981;
+    font-size: 9px;
+    line-height: 1.6;
+}
+
+.flower-back-link {
+    margin-top: 24px;
+    color: #466f52;
+    font-size: 10px;
+}
+
+.flower-chat {
+    min-height: 620px;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid #e4e7e1;
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: 0 22px 68px #26342c12;
+    overflow: hidden;
+}
+
+.flower-chat-header {
+    min-height: 76px;
+    padding: 0 19px;
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    border-bottom: 1px solid #edf0ea;
+}
+
+.flower-avatar {
+    width: 38px;
+    height: 38px;
+    display: grid;
+    place-items: center;
+    border-radius: 12px;
+    background: #edf3ec;
+    color: #567b5c;
+}
+
+.flower-chat-header > div {
+    display: grid;
+    gap: 5px;
+}
+
+.flower-chat-header b {
+    color: #313a33;
+    font-size: 11px;
+}
+
+.flower-chat-header small {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #879087;
+    font-size: 9px;
+}
+
+.flower-chat-header small i {
+    width: 6px;
+    height: 6px;
+}
+
+.flower-reset {
+    width: 34px;
+    height: 34px;
+    margin-left: auto;
+    display: grid;
+    place-items: center;
+    border: 1px solid #e4e8e2;
+    border-radius: 8px;
+    background: white;
+    color: #617467;
+    cursor: pointer;
+}
+
+.flower-chat-messages {
+    min-height: 365px;
+    max-height: 460px;
+    padding: 20px 18px;
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 11px;
+    overflow-y: auto;
+    background: #fbfcfa;
+}
+
+.flower-message {
+    max-width: 88%;
+    padding: 11px 13px;
+    border: 1px solid #e7ebe5;
+    border-radius: 3px 12px 12px;
+    background: white;
+    color: #465048;
+    font-size: 11px;
+    line-height: 1.7;
+    white-space: pre-wrap;
+}
+
+.flower-user-message {
+    align-self: flex-end;
+    border-color: #e3ebe1;
+    border-radius: 12px 3px 12px 12px;
+    background: #edf4eb;
+    color: #334537;
+}
+
+.flower-typing {
+    color: #808980;
+    font-size: 10px;
+}
+
+.flower-prompts {
+    padding: 0 17px 13px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+}
+
+.flower-prompts button {
+    min-height: 31px;
+    padding: 0 10px;
+    border: 1px solid #e3e8e0;
+    border-radius: 20px;
+    background: #fff;
+    color: #667267;
+    font-size: 9px;
+    cursor: pointer;
+}
+
+.flower-prompts button:hover {
+    border-color: #9caf9b;
+}
+
+.flower-composer {
+    min-height: 53px;
+    margin: 0 15px;
+    display: flex;
+    align-items: center;
+    border: 1px solid #e0e5de;
+    border-radius: 8px;
+    background: #fff;
+}
+
+.flower-composer:focus-within {
+    border-color: #9aaf9c;
+    box-shadow: 0 0 0 3px #eaf1e8;
+}
+
+.flower-composer input {
+    min-width: 0;
+    min-height: 49px;
+    padding: 0 13px;
+    flex: 1;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: #303832;
+    font-size: 11px;
+}
+
+.flower-composer input::placeholder {
+    color: #a0a8a0;
+}
+
+.flower-composer button {
+    width: 36px;
+    height: 36px;
+    margin-right: 7px;
+    display: grid;
+    place-items: center;
+    border: 0;
+    border-radius: 7px;
+    background: #456c4c;
+    color: white;
+    cursor: pointer;
+}
+
+.flower-composer button:disabled {
+    background: #b6c3b6;
+    cursor: not-allowed;
+}
+
+.flower-error {
+    margin: 0 17px 10px;
+    color: #aa453a;
+    font-size: 10px;
+}
+
+.flower-new-order {
+    min-height: 42px;
+    margin: 0 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border: 0;
+    border-radius: 7px;
+    background: #456c4c;
+    color: white;
+    font-size: 11px;
+    font-weight: 620;
+    cursor: pointer;
+}
+
+.flower-chat-footnote {
+    margin: 11px 17px 14px;
+    color: #8b938b;
+    font-size: 8px;
+    line-height: 1.6;
+}
+
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+@media (max-width: 760px) {
+    .flower-page {
+        padding: 0 17px 35px;
+    }
+
+    .flower-demo-badge {
+        font-size: 7px;
+        letter-spacing: .5px;
+    }
+
+    .flower-layout {
+        margin-top: 34px;
+        grid-template-columns: 1fr;
+        gap: 27px;
+    }
+
+    .flower-intro {
+        padding-top: 0;
+    }
+
+    .flower-intro h1 {
+        font-size: 38px;
+    }
+
+    .flower-catalog {
+        margin-top: 23px;
+    }
+
+    .flower-chat {
+        min-height: 580px;
+    }
+
+    .flower-chat-messages {
+        min-height: 330px;
+        max-height: 420px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        scroll-behavior: auto !important;
+        animation-duration: .01ms !important;
+        transition-duration: .01ms !important;
+    }
+}

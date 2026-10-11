@@ -1,0 +1,279 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum AssistantStatus {
+  draft
+  active
+  paused
+}
+
+enum ConversationStatus {
+  open
+  resolved
+  needs_human
+}
+
+enum LeadStatus {
+  new
+  contacted
+  qualified
+  converted
+}
+
+enum SubscriptionStatus {
+  trialing
+  active
+  past_due
+  cancelled
+}
+
+enum TeamRole {
+  owner
+  admin
+  agent
+}
+
+enum ChannelType {
+  website
+  whatsapp
+  telegram
+  instagram
+  facebook
+  google_business
+}
+
+enum FlowerPaymentMethod {
+  cash_on_delivery
+  bank_transfer
+}
+
+enum FlowerOrderStatus {
+  pending_confirmation
+  confirmed
+  preparing
+  out_for_delivery
+  delivered
+  cancelled
+}
+
+model User {
+  id               String       @id @default(cuid())
+  email            String       @unique
+  name             String?
+  passwordHash     String?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  ownedBusinesses  Business[]   @relation("BusinessOwner")
+  teamMemberships  TeamMember[]
+}
+
+model Business {
+  id          String        @id @default(cuid())
+  ownerId     String
+  name        String
+  category    String
+  description String        @default("")
+  location    String        @default("")
+  hours       String        @default("")
+  phone       String?
+  timezone    String        @default("Asia/Almaty")
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  owner       User          @relation("BusinessOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  assistants  Assistant[]
+  knowledge   KnowledgeItem[]
+  conversations Conversation[]
+  leads       Lead[]
+  appointments Appointment[]
+  integrations Integration[]
+  subscription Subscription?
+  teamMembers TeamMember[]
+  notifications Notification[]
+
+  @@index([ownerId])
+}
+
+model Assistant {
+  id           String        @id @default(cuid())
+  businessId   String
+  name         String
+  personality  String        @default("Friendly")
+  language     String        @default("English")
+  systemPrompt String        @default("")
+  status       AssistantStatus @default(draft)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  business     Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  conversations Conversation[]
+
+  @@index([businessId, status])
+}
+
+model KnowledgeItem {
+  id         String   @id @default(cuid())
+  businessId String
+  title      String
+  content    String   @db.Text
+  sourceType String   @default("manual")
+  approved   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId, approved])
+}
+
+model Conversation {
+  id          String             @id @default(cuid())
+  businessId  String
+  assistantId String
+  customerId  String?
+  channel     ChannelType        @default(website)
+  status      ConversationStatus @default(open)
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  business    Business           @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  assistant   Assistant          @relation(fields: [assistantId], references: [id], onDelete: Cascade)
+  messages    Message[]
+  leads       Lead[]
+
+  @@index([businessId, status, updatedAt])
+  @@index([assistantId, createdAt])
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  role           String
+  content        String       @db.Text
+  createdAt      DateTime     @default(now())
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+}
+
+model Lead {
+  id             String     @id @default(cuid())
+  businessId     String
+  conversationId String?
+  name           String?
+  phone          String?
+  email          String?
+  source         ChannelType @default(website)
+  message        String      @default("") @db.Text
+  status         LeadStatus  @default(new)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  business       Business    @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  conversation   Conversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+
+  @@index([businessId, status, createdAt])
+}
+
+model Appointment {
+  id           String   @id @default(cuid())
+  businessId   String
+  customerName String
+  customerPhone String?
+  service      String?
+  startsAt     DateTime
+  status       String   @default("requested")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  business     Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId, startsAt])
+}
+
+model Integration {
+  id          String      @id @default(cuid())
+  businessId  String
+  channel     ChannelType
+  externalId  String?
+  credentials String?     @db.Text
+  connectedAt DateTime?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  business    Business    @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@unique([businessId, channel])
+}
+
+model Subscription {
+  id                   String             @id @default(cuid())
+  businessId           String             @unique
+  plan                 String             @default("free")
+  status               SubscriptionStatus @default(trialing)
+  messageLimit         Int                @default(100)
+  messagesUsed         Int                @default(0)
+  stripeCustomerId     String?            @unique
+  stripeSubscriptionId String?            @unique
+  currentPeriodEnd     DateTime?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+  business             Business           @relation(fields: [businessId], references: [id], onDelete: Cascade)
+}
+
+model TeamMember {
+  id         String   @id @default(cuid())
+  businessId String
+  userId     String
+  role       TeamRole @default(agent)
+  createdAt  DateTime @default(now())
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([businessId, userId])
+  @@index([userId])
+}
+
+model Notification {
+  id         String   @id @default(cuid())
+  businessId String
+  type       String
+  title      String
+  body       String   @db.Text
+  readAt     DateTime?
+  createdAt  DateTime @default(now())
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId, readAt, createdAt])
+}
+
+model FlowerOrder {
+  id              String              @id @default(cuid())
+  idempotencyKey  String              @unique
+  occasion        String
+  productId       String
+  productName     String
+  priceKzt        Int
+  budgetKzt       Int?
+  deliveryDate    String
+  customerName    String
+  customerPhone   String
+  deliveryAddress String              @db.Text
+  paymentMethod   FlowerPaymentMethod
+  status          FlowerOrderStatus   @default(pending_confirmation)
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  @@index([status, createdAt])
+}
+
+model FlowerChatSession {
+  id             String   @id @default(cuid())
+  chatId         String   @unique
+  step           String   @default("occasion")
+  draftJson      String   @db.Text
+  lastReply      String   @default("") @db.Text
+  idempotencyKey String   @unique
+  lastUpdateId   Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
