@@ -37,6 +37,7 @@ import {
     writeWorkspace,
 } from "@/lib/workspace";
 import type { ChatTurn } from "@/lib/ai";
+import "../floral-theme.css";
 
 type View =
     | "overview"
@@ -339,7 +340,7 @@ export default function DashboardPage() {
                             <Sparkles size={16} />
                         </span>
                         <span>
-                            biz<span>ai</span>
+                            Floral<span>AI</span>
                         </span>
                     </Link>
                     <button

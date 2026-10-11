@@ -20,6 +20,7 @@ import {
     useDemoWorkspace,
     writeWorkspace,
 } from "@/lib/workspace";
+import "../floral-theme.css";
 
 const categories: BusinessCategory[] = [
     "Beauty & wellness",
@@ -164,7 +165,7 @@ export default function OnboardingPage() {
                         <Sparkles size={17} />
                     </span>
                     <span>
-                        biz<span>ai</span>
+                        Floral<span>AI</span>
                     </span>
                 </Link>
                 <div className="setup-account">

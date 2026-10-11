@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { readWorkspace, writeWorkspace } from "@/lib/workspace";
+import "../app/floral-theme.css";
 
 export function AuthForm({ mode }: { mode: "signup" | "login" }) {
     const router = useRouter();

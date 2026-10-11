@@ -1,6 +1,6 @@
 # FloralAI
 
-FloralAI is a florist-focused assistant preview built with Next.js App Router, React, TypeScript and Tailwind CSS. It includes a dark, responsive product site, a flower-order conversation demo, browser-local onboarding, a dashboard shell and a server-side AI response abstraction.
+FloralAI is a florist-focused assistant preview built with Next.js App Router, React, TypeScript and Tailwind CSS. It includes one consistent dark, responsive design across the product site, flower-order demo, account screens, onboarding flow and every dashboard section.
 
 ## Current status
 
