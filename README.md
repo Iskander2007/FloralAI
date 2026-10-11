@@ -11,9 +11,10 @@ A small-business AI assistant platform foundation built with Next.js App Router,
 | Signup, login and onboarding flow | Browser-local demo state only; not authentication |
 | Dashboard, assistant test chat, knowledge editor and empty states | Working with browser-local demo data |
 | `/api/chat` | Validated request shape; mock mode by default; optional server-side OpenAI-compatible provider |
-| Flower shop order assistant (`/flower-shop`) | Russian guided order conversation; PostgreSQL persistence after database setup |
-| Telegram florist bot (`/api/telegram/webhook`) | Webhook code ready; requires a BotFather token, public deployment and PostgreSQL |
+| Flower shop order assistant (`/flower-shop`) | Public demo is deployed; Russian guided order conversation; PostgreSQL persistence requires database setup |
+| Telegram florist bot (`/api/telegram/webhook`) | Webhook code ready; requires a BotFather token, public deployment and PostgreSQL; not connected yet |
 | PostgreSQL data model | Prisma schema includes flower orders; connect `DATABASE_URL` before saving orders |
+| Vercel hosting | Deployed on the free Hobby plan; public demo link below |
 | OpenAI, Supabase Auth, Stripe, WhatsApp, Instagram and Google Business | Not configured or connected |
 
 The app is a functional product preview, not a production-ready multi-tenant SaaS. Do not put real customer data in it. The local demo account is not a security boundary; dashboard pages and the chat API are not authenticated or tenant-isolated yet.
@@ -34,7 +35,7 @@ Copy-Item .env.example .env.local
 npm run dev
 ```
 
-Open `http://localhost:3000`. The product works without API keys in mock mode. `npm run build` creates a production build; `npm run lint` runs ESLint.
+Open `http://localhost:3000`. The product works without API keys in mock mode. `npm run build` generates Prisma Client and creates a production build; `npm run lint` runs ESLint.
 
 ## Environment variables
 
@@ -44,7 +45,7 @@ See `.env.example` for the complete list. At minimum, the app uses `NEXT_PUBLIC_
 - `USE_MOCK_AI=false` enables the server-side OpenAI-compatible call and requires `OPENAI_API_KEY`.
 - `DATABASE_URL` is required for the flower assistant to persist confirmed orders.
 - Never use a `NEXT_PUBLIC_` prefix for provider secrets, database credentials, Stripe secrets, or Supabase service-role keys.
-- Replace the reserved `bizai.example` metadata/sitemap host with the production URL before deployment.
+- Set `NEXT_PUBLIC_APP_URL` to the public deployment URL in Vercel before enabling Telegram or relying on sitemap links.
 
 ## Database setup
 
@@ -95,24 +96,26 @@ The webhook only accepts private Telegram chats, validates Telegram's secret hea
 
 ## GitHub, team roles and presentation
 
-Before presenting, add the repository URL and live deployment URL here, and replace the role placeholders with the real team members and their work. Do not claim that a deployment or channel is live until it has been configured and tested.
+Do not claim that a channel or integration is live until it has been configured and tested.
 
-- GitHub repository: not connected in this workspace.
-- Live deployment: not configured.
-- Team roles and individual contributions: add each participant's real name, feature, and meaningful commits.
-- Demo: run the flower order flow at `/flower-shop`; set `DATABASE_URL` and run `npx prisma db push` first to persist orders.
-- Telegram: set the server-side bot token and webhook secret, then register the HTTPS webhook using the command above.
+- GitHub repository: [Iskander2007/FloralAI](https://github.com/Iskander2007/FloralAI).
+- Live deployment: [FloralAI on Vercel](https://floral-ai-git-main-iskander11.vercel.app).
+- Flower shop demo: [Open the order conversation](https://floral-ai-git-main-iskander11.vercel.app/flower-shop). Catalog and prices are examples; without a configured PostgreSQL database, confirmed orders are not persisted.
+- Database: not configured in production. Set `DATABASE_URL` in Vercel and apply the Prisma schema before using order persistence.
+- Telegram: not connected. Set the server-side bot token, webhook secret, and `NEXT_PUBLIC_APP_URL`, then register the HTTPS webhook using the command above.
+- Payments: card payments are not connected. The demo does not collect money.
+- Team roles and individual contributions: record each participant's actual work and meaningful GitHub commits here before presenting; do not invent contributions.
 
 ## Deployment checklist
 
-- Configure production database and apply the Prisma schema.
+- Configure production database and apply the Prisma schema if order persistence is required.
 - Implement server-backed auth, authorization, tenant isolation and protected API routes.
 - Add a protected florist order inbox and merchant notifications before taking real orders.
 - Derive AI context from the authorized database record, not request JSON.
 - Add rate limiting, usage limits and retention/deletion controls.
 - Store integration tokens encrypted and use signed, verified provider webhooks.
 - Configure and test Stripe only after billing policy and webhook handling are ready.
-- Replace the placeholder app URL, review privacy/terms and set production metadata.
+- Set `NEXT_PUBLIC_APP_URL` to the deployed URL, review privacy/terms and set production metadata.
 - Run `npm run lint` and `npm run build` against production environment values.
 - Add automated tests for onboarding, authentication, tenant boundaries, chat validation, usage limits and handoff behavior.
 
