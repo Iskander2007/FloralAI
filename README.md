@@ -1,6 +1,6 @@
-# BizAI
+# FloralAI
 
-A small-business AI assistant platform foundation built with Next.js App Router, React, TypeScript and Tailwind CSS. The current build includes a polished marketing site, interactive demo, browser-local onboarding, a dashboard shell and a server-side AI response abstraction.
+FloralAI is a florist-focused assistant preview built with Next.js App Router, React, TypeScript and Tailwind CSS. It includes a dark, responsive product site, a flower-order conversation demo, browser-local onboarding, a dashboard shell and a server-side AI response abstraction.
 
 ## Current status
 

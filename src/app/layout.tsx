@@ -9,21 +9,24 @@ const geistSans = Geist({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://bizai.example"),
-  title: "AI Assistant for Small Businesses | BizAI",
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_APP_URL ??
+      "https://floral-ai-git-main-iskander11.vercel.app",
+  ),
+  title: "FloralAI | Thoughtful conversations, beautifully handled",
   description:
-    "Automate customer conversations, capture leads and support your business 24/7 with an AI assistant.",
+    "A thoughtful AI teammate for flower shops and small businesses. Welcome customers, guide orders and never miss a conversation.",
   openGraph: {
-    title: "BizAI | Your AI teammate for every customer",
+    title: "FloralAI | A thoughtful AI teammate for your business",
     description:
-      "Answer questions, capture leads and book appointments around the clock.",
-    siteName: "BizAI",
+      "Welcome every customer, guide flower orders and keep conversations moving.",
+    siteName: "FloralAI",
     locale: "en_US",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "BizAI | Your AI teammate for every customer",
+    title: "FloralAI | A thoughtful AI teammate for your business",
     description:
       "Answer questions, capture leads and book appointments around the clock.",
   },

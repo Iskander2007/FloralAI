@@ -545,7 +545,7 @@ export default function OnboardingPage() {
             </div>
             <footer className="setup-footer">
                 <span>
-                    <MessageCircle size={13} /> Need a hand? hello@bizai.example
+                    <MessageCircle size={13} /> Need a hand? hello@floralai.example
                 </span>
                 <span>DEMO SETUP · NOTHING PUBLISHED</span>
             </footer>

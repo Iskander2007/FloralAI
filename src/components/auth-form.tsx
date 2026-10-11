@@ -42,7 +42,7 @@ export function AuthForm({ mode }: { mode: "signup" | "login" }) {
     return (
         <main className="auth-page">
             <Link href="/" className="auth-back">
-                <ArrowLeft size={15} /> Back to BizAI
+                <ArrowLeft size={15} /> Back to FloralAI
             </Link>
             <section className="auth-card">
                 <Link href="/" className="brand auth-brand">
@@ -50,7 +50,7 @@ export function AuthForm({ mode }: { mode: "signup" | "login" }) {
                         <Sparkles size={17} />
                     </span>
                     <span>
-                        biz<span>ai</span>
+                        Floral<span>AI</span>
                     </span>
                 </Link>
                 <div className="auth-kicker">
@@ -119,7 +119,7 @@ export function AuthForm({ mode }: { mode: "signup" | "login" }) {
                     Continue with Google <span>Not connected</span>
                 </button>
                 <p className="auth-switch">
-                    {isSignup ? "Already have an account?" : "New to BizAI?"}{" "}
+                    {isSignup ? "Already have an account?" : "New to FloralAI?"}{" "}
                     <Link href={isSignup ? "/login" : "/signup"}>
                         {isSignup ? "Log in" : "Create a free account"}
                     </Link>

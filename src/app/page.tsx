@@ -22,6 +22,7 @@ import {
 import Link from "next/link";
 import { annualDiscount, plans } from "@/lib/plans";
 import { FormEvent, useMemo, useState } from "react";
+import "./floral-theme.css";
 
 type BusinessKey = "salon" | "restaurant" | "clinic" | "shop" | "auto";
 type ChatMessage = { role: "assistant" | "customer"; content: string };
@@ -178,12 +179,12 @@ function replyFor(business: BusinessKey, text: string) {
 
 function Brand() {
     return (
-        <Link href="/" className="brand" aria-label="BizAI home">
+        <Link href="/" className="brand" aria-label="FloralAI home">
             <span className="brand-mark">
                 <Sparkles size={17} strokeWidth={2.4} />
             </span>
             <span>
-                biz<span>ai</span>
+                Floral<span>AI</span>
             </span>
         </Link>
     );
@@ -329,7 +330,7 @@ function ChatDemo({
                 </button>
             </form>
             <div className="chat-footnote">
-                Powered by <strong>bizai</strong> <span>Preview demo</span>
+                Powered by <strong>FloralAI</strong> <span>Preview demo</span>
             </div>
         </div>
     );
@@ -364,12 +365,12 @@ const benefits = [
 
 const faqs = [
     [
-        "What is BizAI?",
+        "What is FloralAI?",
         "A virtual teammate that answers customer questions using your business information, captures leads and helps with bookings.",
     ],
     [
         "Do I need technical knowledge?",
-        "No. Tell us about your business in plain language and BizAI turns it into a helpful assistant.",
+        "No. Tell us about your business in plain language and FloralAI turns it into a helpful assistant.",
     ],
     [
         "Can I teach it about my business?",
@@ -377,7 +378,7 @@ const faqs = [
     ],
     [
         "Will it make things up?",
-        "BizAI is designed to stay within the information you provide. When it is unsure, it says so and offers a human handoff.",
+        "FloralAI is designed to stay within the information you provide. When it is unsure, it says so and offers a human handoff.",
     ],
     [
         "Can my team take over a conversation?",
@@ -396,7 +397,7 @@ export default function Home() {
     const [annualBilling, setAnnualBilling] = useState(false);
 
     return (
-        <main>
+        <main className="floral-site">
             <header className="site-header">
                 <div className="header-inner">
                     <Brand />
@@ -468,7 +469,7 @@ export default function Home() {
                             for <span>every customer.</span>
                         </h1>
                         <p className="hero-description">
-                            BizAI answers questions, captures leads and books appointments for
+                            FloralAI answers questions, captures leads and books appointments for
                             your business, around the clock.
                         </p>
                         <div className="hero-actions">
@@ -563,7 +564,7 @@ export default function Home() {
                         </h2>
                     </div>
                     <p>
-                        Keep the human touch in your business. Let BizAI take the repetitive
+                        Keep the human touch in your business. Let FloralAI take the repetitive
                         conversations off your hands.
                     </p>
                 </div>
@@ -639,7 +640,7 @@ export default function Home() {
                         <span>Not just the internet.</span>
                     </h2>
                     <p>
-                        Give BizAI your services, prices, hours and policies. It learns what
+                        Give FloralAI your services, prices, hours and policies. It learns what
                         makes your business yours, then uses those details to help every
                         customer.
                     </p>
@@ -785,7 +786,7 @@ export default function Home() {
                         </div>
                         <h3>Make it yours</h3>
                         <p>
-                            BizAI organises your services, tone and hours into a helpful
+                            FloralAI organises your services, tone and hours into a helpful
                             assistant.
                         </p>
                         <div className="step-visual step-visual-tags">
@@ -850,7 +851,7 @@ export default function Home() {
                             <p>
                                 <b>A demo, not a real business.</b>
                                 <br />
-                                These sample replies show how BizAI works. External messaging
+                                These sample replies show how FloralAI works. External messaging
                                 channels aren’t connected.
                             </p>
                         </div>
@@ -956,7 +957,7 @@ export default function Home() {
                     <article className="price-card">
                         <span className="plan-label">A GOOD PLACE TO START</span>
                         <h3>Free</h3>
-                        <p>Try BizAI with a real, working demo.</p>
+                        <p>Try FloralAI with a real, working demo.</p>
                         <div className="price">
                             <strong>₸{plans.free.monthlyPriceKzt.toLocaleString("en-US")}</strong>
                             <span>/ month</span>
@@ -1040,7 +1041,7 @@ export default function Home() {
                     <div className="eyebrow">A FEW GOOD QUESTIONS</div>
                     <h2>Good to know.</h2>
                     <p>Still curious? We’re here to help.</p>
-                    <a href="mailto:hello@bizai.example" className="text-link">
+                    <a href="mailto:hello@floralai.example" className="text-link">
                         Talk to our team <ArrowRight size={15} />
                     </a>
                 </div>
@@ -1114,13 +1115,13 @@ export default function Home() {
                     <div className="footer-column">
                         <span>COMPANY</span>
                         <a href="#faq">FAQ</a>
-                        <a href="mailto:hello@bizai.example">Contact</a>
+                        <a href="mailto:hello@floralai.example">Contact</a>
                         <a href="#privacy">Privacy</a>
                         <a href="#terms">Terms</a>
                     </div>
                     <div className="footer-signup">
                         <span>A BETTER KIND OF BUSY</span>
-                        <p>Explore a real sample conversation with BizAI.</p>
+                        <p>Explore a real sample conversation with FloralAI.</p>
                         <button
                             className="button button-outline footer-demo-button"
                             type="button"
@@ -1132,7 +1133,7 @@ export default function Home() {
                     </div>
                 </div>
                 <div className="footer-bottom">
-                    <span>© 2026 BizAI. Made for the independently minded.</span>
+                    <span>© 2026 FloralAI. Made for the independently minded.</span>
                     <span className="footer-status">
                         <i className="online-dot" /> ALL SYSTEMS OPERATIONAL
                     </span>
@@ -1172,7 +1173,7 @@ export default function Home() {
                             </button>
                         </div>
                         <p className="modal-description">
-                            Choose a business, ask anything, and see how BizAI responds.
+                            Choose a business, ask anything, and see how FloralAI responds.
                         </p>
                         <ChatDemo />
                     </section>

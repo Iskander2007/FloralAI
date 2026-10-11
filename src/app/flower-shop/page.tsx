@@ -11,6 +11,7 @@ import {
     formatKzt,
 } from "@/lib/flower-assistant";
 import "./flower-shop.css";
+import "../floral-theme.css";
 
 type ChatMessage = { role: "assistant" | "user"; content: string };
 
@@ -85,7 +86,7 @@ export default function FlowerShopPage() {
         <main className="flower-page">
             <header className="flower-header">
                 <Link className="flower-back" href="/">
-                    <ArrowLeft size={16} /> BizAI
+                    <ArrowLeft size={16} /> FloralAI
                 </Link>
                 <span className="flower-demo-badge"><i /> ДЕМО ЦВЕТОЧНОГО БИЗНЕСА</span>
             </header>

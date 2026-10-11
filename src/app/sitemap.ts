@@ -1,6 +1,8 @@
 import type { MetadataRoute } from "next";
 
-const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://bizai.example";
+const baseUrl =
+    process.env.NEXT_PUBLIC_APP_URL ??
+    "https://floral-ai-git-main-iskander11.vercel.app";
 
 export default function sitemap(): MetadataRoute.Sitemap {
     return ["/", "/signup", "/login"].map((path) => ({
