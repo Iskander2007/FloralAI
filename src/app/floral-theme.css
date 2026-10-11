@@ -948,6 +948,71 @@
     font-size: 10px;
 }
 
+.brand-name,
+.brand-name > span {
+    color: inherit;
+}
+
+.brand-name > span {
+    color: var(--floral-accent, #c7f36b);
+}
+
+.language-switcher {
+    display: inline-flex;
+    min-height: 36px;
+    align-items: center;
+    gap: 7px;
+    padding: 0 10px;
+    border: 1px solid #3a493e;
+    border-radius: 9px;
+    background: #111815;
+    color: #d8e2da;
+}
+
+.language-switcher svg {
+    flex: 0 0 auto;
+    color: #c7f36b;
+}
+
+.language-switcher select {
+    max-width: 112px;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.language-switcher option {
+    background: #111815;
+    color: #f0f5ef;
+}
+
+.language-switcher:focus-within {
+    outline: 2px solid #c7f36b;
+    outline-offset: 2px;
+}
+
+.auth-language {
+    display: flex;
+    justify-content: flex-end;
+    margin: -17px -17px 12px;
+}
+
+.auth-brand .brand-name > span {
+    color: var(--floral-accent);
+}
+
+.setup-header .brand-name > span {
+    color: var(--floral-accent);
+}
+
+.header-actions .language-switcher {
+    min-height: 36px;
+}
+
 .auth-page,
 .onboarding-loading,
 .dashboard-loading,

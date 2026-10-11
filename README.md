@@ -8,18 +8,19 @@ FloralAI is a florist-focused assistant preview built with Next.js App Router, R
 | --- | --- |
 | Landing page and responsive navigation | Working |
 | Five interactive sample business demos | Working with deterministic mock replies |
-| Signup, login and onboarding flow | Browser-local demo state only; not authentication |
+| Signup and login | Supabase email/password and Google OAuth when configured; otherwise a clearly labelled browser-local demo |
+| Business profile and dashboard data | Browser-local preview data; not yet stored in a user-owned production database |
 | Dashboard, assistant test chat, knowledge editor and empty states | Working with browser-local demo data |
 | `/api/chat` | Validated request shape; mock mode by default; optional server-side OpenAI-compatible provider |
-| Flower shop order assistant (`/flower-shop`) | Public demo is deployed; Russian guided order conversation; PostgreSQL persistence requires database setup |
+| Flower shop order assistant (`/flower-shop`) | Guided ordering in English, Russian and Kazakh; PostgreSQL persistence requires database setup |
 | Telegram florist bot (`/api/telegram/webhook`) | Webhook code ready; requires a BotFather token, public deployment and PostgreSQL; not connected yet |
 | PostgreSQL data model | Prisma schema includes flower orders; connect `DATABASE_URL` before saving orders |
 | Vercel hosting | Deployed on the free Hobby plan; public demo link below |
-| OpenAI, Supabase Auth, Stripe, WhatsApp, Instagram and Google Business | Not configured or connected |
+| Supabase Auth, Google OAuth, card payments, WhatsApp, Instagram and Google Business | Require provider account setup and credentials; not configured by default |
 
-The app is a functional product preview, not a production-ready multi-tenant SaaS. Do not put real customer data in it. The local demo account is not a security boundary; dashboard pages and the chat API are not authenticated or tenant-isolated yet.
+The app is a functional product preview, not a production-ready multi-tenant SaaS. Do not put real customer data in it. When Supabase is configured, dashboard navigation is protected by a verified server session, but business/profile data remains in this browser and the chat/order APIs are not tenant-isolated.
 
-The flower-shop page and Telegram handler use a deterministic guided conversation, not an LLM. Sample products and prices are illustrative; there is no live inventory, card payment, or owner order-management screen. Customers can choose cash on delivery or a bank transfer after the shop confirms the order. PostgreSQL is required to save confirmed orders. Telegram message delivery uses Telegram's Bot API (no per-message API charge), but the bot still needs a public host and a token from BotFather.
+The flower-shop page and Telegram handler use a deterministic guided conversation, not an LLM. Sample products and prices are illustrative; there is no live inventory, card payment, or owner order-management screen. Customers can choose cash on delivery or a bank transfer after the shop confirms the order. PostgreSQL is required to save confirmed orders. Telegram message delivery uses Telegram's Bot API (no per-message API charge), but the bot still needs a public host and a token from BotFather. The conversation does not collect or store card numbers.
 
 ## Requirements
 
@@ -44,6 +45,7 @@ See `.env.example` for the complete list. At minimum, the app uses `NEXT_PUBLIC_
 - `USE_MOCK_AI=true` keeps all chat replies deterministic and local to the server process.
 - `USE_MOCK_AI=false` enables the server-side OpenAI-compatible call and requires `OPENAI_API_KEY`.
 - `DATABASE_URL` is required for the flower assistant to persist confirmed orders.
+- `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` enable real Supabase Auth. The legacy `NEXT_PUBLIC_SUPABASE_ANON_KEY` is accepted if the project does not have a publishable key.
 - Never use a `NEXT_PUBLIC_` prefix for provider secrets, database credentials, Stripe secrets, or Supabase service-role keys.
 - Set `NEXT_PUBLIC_APP_URL` to the public deployment URL in Vercel before enabling Telegram or relying on sitemap links.
 
@@ -67,11 +69,20 @@ The flower assistant writes confirmed orders to PostgreSQL through `/api/flower-
 
 Before enabling provider calls in production, add authenticated sessions, per-tenant usage accounting, server-derived business context, rate limiting, abuse controls, audit logging and provider timeout/error monitoring. The current route accepts business context from its caller and must not be treated as a production endpoint.
 
-## Authentication and authorization
+## Authentication setup
 
-Signup and login are intentionally labelled as local preview flows. They save the email and business profile in `localStorage`; the password is not persisted or verified. There are no protected routes, server sessions, password reset, OAuth, team authorization or tenant isolation in this preview.
+Email/password registration and Google OAuth are handled by Supabase Auth when configured. Without the two public Supabase environment variables the app remains in a labelled local demo mode. Passwords are never written to `localStorage`. The business profile and workspace are still browser-local, so authentication does not yet provide multi-device business data or production tenant isolation.
 
-For production, select an auth provider (Supabase Auth or Clerk are reasonable options), verify sessions on the server, derive tenant IDs from the verified identity and enforce tenant ownership in every query. Do not rely on client navigation guards for security.
+1. Create a Supabase project and add `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` to `.env.local` and the deployment environment. The old anon key can be used as a fallback.
+2. In Supabase **Authentication → URL Configuration**, set the Site URL to the app origin and allow these exact callback URLs: `http://localhost:3000/auth/callback` for local development and `https://YOUR_DEPLOYMENT_HOST/auth/callback` for production. Do not use a wildcard redirect.
+3. For Google sign-in, create OAuth credentials in Google Cloud Console, enable the Google provider in Supabase, and add the Supabase callback URL shown by its provider settings to the Google OAuth client's authorized redirect URIs. Add the app callback URLs above to Supabase's redirect allow list.
+4. Configure Supabase email confirmation and production SMTP before inviting real users. The confirmation link returns to `/auth/callback?next=/onboarding`.
+
+The server checks Supabase users before serving the dashboard when auth is enabled; Next.js proxy refreshes the auth cookie. This is not sufficient production authorization for the rest of the product: API endpoints, order ownership, database records and tenant isolation still need server-side authorization before real business data is used.
+
+## Payments
+
+Card payments, including Visa, are not connected. No card form is present and FloralAI does not collect or store PAN/CVV data. To enable payments, the business owner must first open a merchant account with a supported payment provider; implementation should use that provider's hosted checkout and verified server-side webhooks. Do not ask customers to message their card details.
 
 ## Telegram florist bot and payments
 

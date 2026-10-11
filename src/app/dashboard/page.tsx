@@ -29,13 +29,16 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState, useSyncExternalStore } from "react";
+import { useLanguage } from "@/components/language-provider";
+import { LanguageSwitcher } from "@/components/language-switcher";
 import {
     BusinessProfile,
     clearWorkspace,
     DemoWorkspace,
-    useDemoWorkspace,
+    useWorkspaceSession,
     writeWorkspace,
 } from "@/lib/workspace";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import type { ChatTurn } from "@/lib/ai";
 import "../floral-theme.css";
 
@@ -105,6 +108,7 @@ function getServerDashboardView(): View {
 }
 
 function TestChat({ workspace }: { workspace: DemoWorkspace }) {
+    const { t } = useLanguage();
     const business = workspace.business;
     const [history, setHistory] = useState<ChatTurn[]>([]);
     const [input, setInput] = useState("");
@@ -155,18 +159,18 @@ function TestChat({ workspace }: { workspace: DemoWorkspace }) {
                     <Sparkles size={15} />
                 </span>
                 <div>
-                    <b>{business?.name || "Your assistant"}</b>
+                    <b>{business?.name || t("Your assistant")}</b>
                     <small>
-                        <i className="online-dot" /> Private test session
+                        <i className="online-dot" /> {t("Private test session")}
                     </small>
                 </div>
-                <span className="test-label">TEST MODE</span>
+                <span className="test-label">{t("TEST MODE")}</span>
             </div>
             <div className="test-chat-messages">
                 <div className="test-message assistant-message">
-                    Hi, I’m your {business?.tone.toLowerCase() || "friendly"} assistant
-                    for {business?.name || "your business"}. Ask me about your services,
-                    prices or hours.
+                    {t("Hi, I’m your friendly assistant")} for{" "}
+                    {business?.name || t("your business")}.{" "}
+                    {t("Ask me about your services, prices or hours.")}
                 </div>
                 {history.map((turn, index) => (
                     <div
@@ -185,12 +189,12 @@ function TestChat({ workspace }: { workspace: DemoWorkspace }) {
                 )}
                 {error && (
                     <div className="test-error" role="alert">
-                        Something went wrong.{" "}
+                        {t("Something went wrong.")}{" "}
                         <button
                             type="button"
                             onClick={() => send(undefined, history.at(-1)?.content)}
                         >
-                            Try again
+                            {t("Try again")}
                         </button>
                     </div>
                 )}
@@ -207,7 +211,7 @@ function TestChat({ workspace }: { workspace: DemoWorkspace }) {
                         onClick={() => send(undefined, item)}
                         disabled={busy}
                     >
-                        {item}
+                        {t(item)}
                     </button>
                 ))}
             </div>
@@ -215,13 +219,13 @@ function TestChat({ workspace }: { workspace: DemoWorkspace }) {
                 <input
                     value={input}
                     onChange={(event) => setInput(event.target.value)}
-                    placeholder="Ask about your business..."
-                    aria-label="Test your assistant"
+                    placeholder={t("Ask about your business...")}
+                    aria-label={t("Test your assistant")}
                 />
                 <button
                     type="submit"
                     disabled={!input.trim() || busy}
-                    aria-label="Send message"
+                    aria-label={t("Send message")}
                 >
                     <Send size={15} />
                 </button>
@@ -243,20 +247,21 @@ function EmptyState({
     action?: string;
     onAction?: () => void;
 }) {
+    const { t } = useLanguage();
     return (
         <div className="empty-state">
             <span className="empty-icon">
                 <Icon size={19} />
             </span>
-            <h3>{title}</h3>
-            <p>{copy}</p>
+            <h3>{t(title)}</h3>
+            <p>{t(copy)}</p>
             {action && (
                 <button
                     className="button button-outline"
                     type="button"
                     onClick={onAction}
                 >
-                    {action} <ArrowRight size={14} />
+                    {t(action)} <ArrowRight size={14} />
                 </button>
             )}
         </div>
@@ -265,7 +270,8 @@ function EmptyState({
 
 export default function DashboardPage() {
     const router = useRouter();
-    const { ready, workspace } = useDemoWorkspace();
+    const { t } = useLanguage();
+    const { ready, workspace, authError } = useWorkspaceSession();
     const view = useSyncExternalStore(
         subscribeToDashboardView,
         getDashboardView,
@@ -305,6 +311,19 @@ export default function DashboardPage() {
         });
     }
 
+    async function signOut() {
+        const supabase = createSupabaseBrowserClient();
+        if (supabase) {
+            const { error } = await supabase.auth.signOut();
+            if (error) {
+                setNotice(`Could not sign out: ${error.message}`);
+                return;
+            }
+        }
+        clearWorkspace();
+        router.push("/");
+    }
+
     const business = workspace?.business;
     const active = navigation.find((item) => item.id === view) ?? navigation[0];
 
@@ -314,8 +333,14 @@ export default function DashboardPage() {
                 <span className="loading-mark">
                     <Sparkles size={17} />
                 </span>
-                <p>Opening your workspace...</p>
+                <p>{t("Opening your workspace...")}</p>
             </div>
+        );
+    if (authError)
+        return (
+            <main className="dashboard-loading">
+                <p role="alert">{t("Unable to verify your account session.")} {authError}</p>
+            </main>
         );
     if (!workspace)
         return (
@@ -323,10 +348,10 @@ export default function DashboardPage() {
                 <span className="loading-mark">
                     <Sparkles size={17} />
                 </span>
-                <h1>Start with your business.</h1>
-                <p>Create a local demo workspace to explore the dashboard.</p>
+                <h1>{t("Start with your business.")}</h1>
+                <p>{t("Create a local demo workspace to explore the dashboard.")}</p>
                 <Link className="button button-blue" href="/signup">
-                    Create your AI assistant <ArrowRight size={15} />
+                    {t("Create your AI assistant")} <ArrowRight size={15} />
                 </Link>
             </main>
         );
@@ -339,7 +364,7 @@ export default function DashboardPage() {
                         <span className="brand-mark">
                             <Sparkles size={16} />
                         </span>
-                        <span>
+                        <span translate="no" className="brand-name">
                             Floral<span>AI</span>
                         </span>
                     </Link>
@@ -347,7 +372,7 @@ export default function DashboardPage() {
                         className="sidebar-close"
                         type="button"
                         onClick={() => setMobileNav(false)}
-                        aria-label="Close navigation"
+                        aria-label={t("Close navigation")}
                     >
                         <X size={18} />
                     </button>
@@ -358,14 +383,14 @@ export default function DashboardPage() {
                     </span>
                     <span>
                         <b>{business?.name || "Your business"}</b>
-                        <small>Free workspace</small>
+                        <small>{t("Free workspace")}</small>
                     </span>
                     <ChevronDown size={14} />
                 </button>
-                <nav className="dashboard-nav" aria-label="Workspace navigation">
+                <nav className="dashboard-nav" aria-label={t("Workspace navigation")}>
                     {["WORKSPACE", "BUILD", "ACCOUNT"].map((group) => (
                         <div className="nav-group" key={group}>
-                            <span className="nav-group-label">{group}</span>
+                            <span className="nav-group-label">{t(group)}</span>
                             {navigation
                                 .filter((item) => item.group === group)
                                 .map(({ id, label, icon: Icon }) => (
@@ -376,7 +401,7 @@ export default function DashboardPage() {
                                         type="button"
                                     >
                                         <Icon size={16} />
-                                        <span>{label}</span>
+                                        <span>{t(label)}</span>
                                         {id === "conversations" && <i className="nav-count">0</i>}
                                     </button>
                                 ))}
@@ -386,18 +411,18 @@ export default function DashboardPage() {
                 <div className="sidebar-bottom">
                     <div className="plan-usage">
                         <div>
-                            <span>FREE PLAN</span>
+                            <span>{t("FREE PLAN")}</span>
                             <span>0 / 100</span>
                         </div>
                         <div className="usage-track">
                             <i />
                         </div>
-                        <small>conversations this month</small>
+                        <small>{t("conversations this month")}</small>
                         <Link
                             href="/dashboard?view=billing"
                             onClick={() => selectView("billing")}
                         >
-                            Explore plans <ArrowUpRight size={12} />
+                            {t("Explore plans")} <ArrowUpRight size={12} />
                         </Link>
                     </div>
                     <div className="sidebar-user">
@@ -406,15 +431,12 @@ export default function DashboardPage() {
                         </span>
                         <span>
                             <b>{workspace.email.split("@")[0]}</b>
-                            <small>Demo account</small>
+                            <small>{t("Demo account")}</small>
                         </span>
                         <button
                             type="button"
-                            aria-label="Sign out"
-                            onClick={() => {
-                                clearWorkspace();
-                                router.push("/");
-                            }}
+                            aria-label={t("Sign out")}
+                            onClick={() => void signOut()}
                         >
                             <LogOut size={15} />
                         </button>
@@ -428,25 +450,26 @@ export default function DashboardPage() {
                         type="button"
                         className="dashboard-menu"
                         onClick={() => setMobileNav(true)}
-                        aria-label="Open navigation"
+                        aria-label={t("Open navigation")}
                     >
                         <span />
                         <span />
                         <span />
                     </button>
                     <div className="breadcrumb">
-                        <span>Workspace</span>
+                        <span>{t("Workspace")}</span>
                         <i>/</i>
                         <b>{active.label}</b>
                     </div>
                     <div className="topbar-actions">
+                        <LanguageSwitcher />
                         <span className="preview-pill">
-                            <i /> DEMO MODE
+                            <i /> {t("DEMO MODE")}
                         </span>
                         <button
                             className="topbar-help"
                             type="button"
-                            title="Help center coming soon"
+                            title={t("Help center coming soon")}
                         >
                             <CircleHelp size={17} />
                         </button>
@@ -462,20 +485,17 @@ export default function DashboardPage() {
                                 <div className="assistant-avatar large">
                                     <Sparkles size={19} />
                                 </div>
-                                <span className="eyebrow">YOUR WORKSPACE IS READY</span>
+                                <span className="eyebrow">{t("YOUR WORKSPACE IS READY")}</span>
                                 <h1>
-                                    Let’s meet your
+                                {t("Let’s meet your")}
                                     <br />
-                                    <span>business first.</span>
+                                <span>{t("business first.")}</span>
                                 </h1>
-                                <p>
-                                    Tell us a little about what you do. We’ll use it to create a
-                                    private AI assistant you can test right here.
-                                </p>
+                                <p>{t("Tell us a little about what you do. We’ll use it to create a private AI assistant you can test right here.")}</p>
                                 <Link className="button button-blue" href="/signup">
-                                    Create your AI assistant <ArrowRight size={15} />
+                                    {t("Create your AI assistant")} <ArrowRight size={15} />
                                 </Link>
-                                <small>No channels connected. Nothing is live.</small>
+                                <small>{t("No channels connected. Nothing is live.")}</small>
                             </div>
                             <div className="dashboard-onboarding-art">
                                 <div className="art-circle art-circle-one" />
@@ -484,10 +504,10 @@ export default function DashboardPage() {
                                     <Bot size={27} />
                                 </span>
                                 <div className="art-note art-note-one">
-                                    <Sparkles size={13} /> Your business, understood
+                                    <Sparkles size={13} /> {t("Your business, understood")}
                                 </div>
                                 <div className="art-note art-note-two">
-                                    <MessageCircle size={13} /> Ready for a first chat
+                                    <MessageCircle size={13} /> {t("Ready for a first chat")}
                                 </div>
                             </div>
                         </section>
@@ -502,14 +522,14 @@ export default function DashboardPage() {
                                 <>
                                     <div className="dashboard-page-heading">
                                         <div>
-                                            <div className="eyebrow">MONDAY, SEPTEMBER 28</div>
+                                            <div className="eyebrow">{t("WORKSPACE OVERVIEW")}</div>
                                             <h1>
-                                                Good morning
+                                                {t("Good morning")}
                                                 <span>, {workspace.email.split("@")[0]}.</span>
                                             </h1>
                                             <p>
-                                                Here&apos;s what&apos;s happening with {business.name}{" "}
-                                                today.
+                                                {t("Here's what's happening with")} {business.name}{" "}
+                                                {t("today.")}
                                             </p>
                                         </div>
                                         <button
@@ -517,7 +537,7 @@ export default function DashboardPage() {
                                             className="button button-blue"
                                             onClick={() => selectView("assistant")}
                                         >
-                                            <Sparkles size={15} /> Test your AI
+                                            <Sparkles size={15} /> {t("Test your AI")}
                                         </button>
                                     </div>
                                     <div className="assistant-status">
@@ -528,8 +548,7 @@ export default function DashboardPage() {
                                             <div>
                                                 <b>{business.name} assistant</b>
                                                 <span>
-                                                    <i className="status-dot" /> Ready to test · not
-                                                    published
+                                                    <i className="status-dot" /> {t("Ready to test · not published")}
                                                 </span>
                                             </div>
                                         </div>
@@ -538,12 +557,12 @@ export default function DashboardPage() {
                                                 type="button"
                                                 onClick={() => selectView("assistant")}
                                             >
-                                                Test assistant <ArrowRight size={14} />
+                                                {t("Test assistant")} <ArrowRight size={14} />
                                             </button>
                                             <button
                                                 type="button"
                                                 onClick={() => selectView("settings")}
-                                                aria-label="Assistant settings"
+                                                aria-label={t("Assistant settings")}
                                             >
                                                 <Settings size={15} />
                                             </button>
@@ -566,15 +585,15 @@ export default function DashboardPage() {
                                                     <Icon size={16} />
                                                 </div>
                                                 <strong>{value}</strong>
-                                                <small>Starts once your assistant is connected</small>
+                                                <small>{t("Starts once your assistant is connected")}</small>
                                             </article>
                                         ))}
                                     </div>
                                     <section className="dashboard-panel overview-chart">
                                         <div className="panel-heading">
                                             <div>
-                                                <h2>Conversations</h2>
-                                                <p>Customer conversations over time</p>
+                                                <h2>{t("Conversations")}</h2>
+                                                <p>{t("Customer conversations over time")}</p>
                                             </div>
                                             <button type="button" className="select-period">
                                                 Last 7 days <ChevronDown size={13} />
@@ -592,17 +611,17 @@ export default function DashboardPage() {
                                                 <span className="chart-icon">
                                                     <Activity size={18} />
                                                 </span>
-                                                <b>Your chart starts with your first conversation.</b>
-                                                <small>No activity is tracked in demo mode.</small>
+                                                <b>{t("Your chart starts with your first conversation.")}</b>
+                                                <small>{t("No activity is tracked in demo mode.")}</small>
                                             </div>
                                             <div className="chart-days">
-                                                <span>MON</span>
-                                                <span>TUE</span>
-                                                <span>WED</span>
-                                                <span>THU</span>
-                                                <span>FRI</span>
-                                                <span>SAT</span>
-                                                <span>SUN</span>
+                                                <span>{t("MON")}</span>
+                                                <span>{t("TUE")}</span>
+                                                <span>{t("WED")}</span>
+                                                <span>{t("THU")}</span>
+                                                <span>{t("FRI")}</span>
+                                                <span>{t("SAT")}</span>
+                                                <span>{t("SUN")}</span>
                                             </div>
                                         </div>
                                     </section>
@@ -610,15 +629,15 @@ export default function DashboardPage() {
                                         <section className="dashboard-panel">
                                             <div className="panel-heading">
                                                 <div>
-                                                    <h2>Recent conversations</h2>
-                                                    <p>Latest messages from your channels</p>
+                                                    <h2>{t("Recent conversations")}</h2>
+                                                    <p>{t("Latest messages from your channels")}</p>
                                                 </div>
                                                 <button
                                                     type="button"
                                                     onClick={() => selectView("conversations")}
                                                     className="panel-link"
                                                 >
-                                                    View all <ArrowRight size={13} />
+                                                    {t("View all")} <ArrowRight size={13} />
                                                 </button>
                                             </div>
                                             <EmptyState
@@ -631,8 +650,8 @@ export default function DashboardPage() {
                                         <section className="dashboard-panel">
                                             <div className="panel-heading">
                                                 <div>
-                                                    <h2>Quick actions</h2>
-                                                    <p>Keep building your assistant</p>
+                                                    <h2>{t("Quick actions")}</h2>
+                                                    <p>{t("Keep building your assistant")}</p>
                                                 </div>
                                             </div>
                                             <div className="quick-actions">
@@ -680,10 +699,10 @@ export default function DashboardPage() {
                                 <>
                                     <div className="dashboard-page-heading">
                                         <div>
-                                            <div className="eyebrow">PRIVATE TEST SPACE</div>
-                                            <h1>Meet your assistant.</h1>
+                                            <div className="eyebrow">{t("PRIVATE TEST SPACE")}</div>
+                                            <h1>{t("Meet your assistant.")}</h1>
                                             <p>
-                                                Try a few questions before you decide what to change.
+                                                {t("Try a few questions before you decide what to change.")}
                                             </p>
                                         </div>
                                         <span className="draft-status">
@@ -694,15 +713,14 @@ export default function DashboardPage() {
                                         <section className="dashboard-panel assistant-settings-panel">
                                             <div className="panel-heading">
                                                 <div>
-                                                    <h2>How should your AI behave?</h2>
+                                                    <h2>{t("How should your AI behave?")}</h2>
                                                     <p>
-                                                        Only uses the approved details in your business
-                                                        profile.
+                                                        {t("Only uses the approved details in your business profile.")}
                                                     </p>
                                                 </div>
                                             </div>
                                             <label className="field-label" htmlFor="assistant-name">
-                                                Assistant name
+                                                {t("Assistant name")}
                                             </label>
                                             <input
                                                 className="dashboard-input"
@@ -710,40 +728,39 @@ export default function DashboardPage() {
                                                 defaultValue={`${business.name} assistant`}
                                             />
                                             <label className="field-label" htmlFor="assistant-tone">
-                                                Tone of voice
+                                                {t("Tone of voice")}
                                             </label>
                                             <select
                                                 className="dashboard-input"
                                                 id="assistant-tone"
                                                 defaultValue={business.tone}
                                             >
-                                                <option>Friendly</option>
-                                                <option>Professional</option>
-                                                <option>Premium</option>
-                                                <option>Casual</option>
+                                                <option>{t("Friendly")}</option>
+                                                <option>{t("Professional")}</option>
+                                                <option>{t("Premium")}</option>
+                                                <option>{t("Casual")}</option>
                                             </select>
                                             <label
                                                 className="field-label"
                                                 htmlFor="assistant-language"
                                             >
-                                                Language
+                                                {t("Language")}
                                             </label>
                                             <select
                                                 className="dashboard-input"
                                                 id="assistant-language"
                                                 defaultValue={business.language}
                                             >
-                                                <option>English</option>
-                                                <option>Russian</option>
-                                                <option>Kazakh</option>
+                                                <option>{t("English")}</option>
+                                                <option>{t("Russian")}</option>
+                                                <option>{t("Kazakh")}</option>
                                             </select>
                                             <div className="guardrail-note">
                                                 <BadgeCheck size={15} />
                                                 <span>
-                                                    <b>Grounded in your business</b>
+                                                    <b>{t("Grounded in your business")}</b>
                                                     <small>
-                                                        If your assistant doesn’t know, it’ll say so instead
-                                                        of guessing.
+                                                        {t("If your assistant doesn’t know, it’ll say so instead of guessing.")}
                                                     </small>
                                                 </span>
                                             </div>
@@ -752,7 +769,7 @@ export default function DashboardPage() {
                                                 className="button button-outline full-button"
                                                 onClick={() => selectView("knowledge")}
                                             >
-                                                Review business knowledge <ArrowRight size={14} />
+                                                {t("Review business knowledge")} <ArrowRight size={14} />
                                             </button>
                                         </section>
                                         <TestChat workspace={workspace} />
@@ -764,11 +781,10 @@ export default function DashboardPage() {
                                 <>
                                     <div className="dashboard-page-heading">
                                         <div>
-                                            <div className="eyebrow">CUSTOMER MESSAGES</div>
-                                            <h1>Conversations</h1>
+                                            <div className="eyebrow">{t("CUSTOMER MESSAGES")}</div>
+                                            <h1>{t("Conversations")}</h1>
                                             <p>
-                                                Every conversation in one place, with a human handoff
-                                                when it matters.
+                                                {t("Every conversation in one place, with a human handoff when it matters.")}
                                             </p>
                                         </div>
                                         <button
@@ -776,19 +792,19 @@ export default function DashboardPage() {
                                             type="button"
                                             disabled
                                         >
-                                            <Search size={14} /> Search
+                                            <Search size={14} /> {t("Search")}
                                         </button>
                                     </div>
                                     <div className="dashboard-panel list-panel">
                                         <div className="conversation-filters">
                                             <button className="filter-active" type="button">
-                                                All <span>0</span>
+                                                {t("All")} <span>0</span>
                                             </button>
                                             <button type="button">
-                                                Needs attention <span>0</span>
+                                                {t("Needs attention")} <span>0</span>
                                             </button>
                                             <button type="button">
-                                                Resolved <span>0</span>
+                                                {t("Resolved")} <span>0</span>
                                             </button>
                                         </div>
                                         <EmptyState
@@ -805,35 +821,35 @@ export default function DashboardPage() {
                                 <>
                                     <div className="dashboard-page-heading">
                                         <div>
-                                            <div className="eyebrow">CUSTOMER INTEREST</div>
-                                            <h1>Leads</h1>
-                                            <p>People who asked to hear from your business.</p>
+                                            <div className="eyebrow">{t("CUSTOMER INTEREST")}</div>
+                                            <h1>{t("Leads")}</h1>
+                                            <p>{t("People who asked to hear from your business.")}</p>
                                         </div>
                                         <button
                                             className="button button-outline"
                                             type="button"
                                             disabled
                                         >
-                                            <ArrowDownToLine size={14} /> Export CSV
+                                            <ArrowDownToLine size={14} /> {t("Export CSV")}
                                         </button>
                                     </div>
                                     <div className="dashboard-panel list-panel">
                                         <div className="list-toolbar">
                                             <div className="fake-search">
                                                 <Search size={14} />
-                                                <span>Search leads...</span>
+                                                <span>{t("Search leads...")}</span>
                                             </div>
                                             <button className="select-period" type="button">
-                                                All statuses <ChevronDown size={13} />
+                                                {t("All statuses")} <ChevronDown size={13} />
                                             </button>
                                         </div>
                                         <div className="lead-table">
                                             <div className="lead-row lead-head">
-                                                <span>NAME</span>
-                                                <span>PHONE</span>
-                                                <span>SOURCE</span>
-                                                <span>STATUS</span>
-                                                <span>CREATED</span>
+                                                <span>{t("NAME")}</span>
+                                                <span>{t("PHONE")}</span>
+                                                <span>{t("SOURCE")}</span>
+                                                <span>{t("STATUS")}</span>
+                                                <span>{t("CREATED")}</span>
                                             </div>
                                         </div>
                                         <EmptyState
@@ -851,9 +867,9 @@ export default function DashboardPage() {
                                 <>
                                     <div className="dashboard-page-heading">
                                         <div>
-                                            <div className="eyebrow">WHAT YOUR AI KNOWS</div>
-                                            <h1>Business knowledge</h1>
-                                            <p>Answers come from information you choose to share.</p>
+                                            <div className="eyebrow">{t("WHAT YOUR AI KNOWS")}</div>
+                                            <h1>{t("Business knowledge")}</h1>
+                                            <p>{t("Answers come from information you choose to share.")}</p>
                                         </div>
                                         <div className="heading-actions">
                                             <button
@@ -862,7 +878,7 @@ export default function DashboardPage() {
                                                 disabled
                                                 title="Document upload is not configured"
                                             >
-                                                <ArrowDownToLine size={14} /> Upload document
+                                                <ArrowDownToLine size={14} /> {t("Upload document")}
                                             </button>
                                             <button
                                                 type="button"
@@ -872,7 +888,7 @@ export default function DashboardPage() {
                                                     setAddingKnowledge(true);
                                                 }}
                                             >
-                                                <Plus size={15} /> Add information
+                                                <Plus size={15} /> {t("Add information")}
                                             </button>
                                         </div>
                                     </div>
@@ -882,7 +898,7 @@ export default function DashboardPage() {
                                         </span>
                                         <div>
                                             <b>{business.name}</b>
-                                            <span>Business profile · Edited in this browser</span>
+                                            <span>{t("Business profile · Edited in this browser")}</span>
                                         </div>
                                         <span className="knowledge-ready">
                                             <Check size={12} /> APPROVED
@@ -891,10 +907,9 @@ export default function DashboardPage() {
                                     <div className="dashboard-panel knowledge-editor">
                                         <div className="panel-heading">
                                             <div>
-                                                <h2>About your business</h2>
+                                                <h2>{t("About your business")}</h2>
                                                 <p>
-                                                    This information is available to your assistant in
-                                                    test mode.
+                                                    {t("This information is available to your assistant in test mode.")}
                                                 </p>
                                             </div>
                                             <button
@@ -904,7 +919,7 @@ export default function DashboardPage() {
                                                     setAddingKnowledge((current) => !current)
                                                 }
                                             >
-                                                {addingKnowledge ? "Cancel" : "Edit"}
+                                                {t(addingKnowledge ? "Cancel" : "Edit")}
                                             </button>
                                         </div>
                                         {addingKnowledge ? (
@@ -917,7 +932,7 @@ export default function DashboardPage() {
                                                     }
                                                     rows={8}
                                                     maxLength={4000}
-                                                    placeholder="Describe your business, services, prices, opening hours and policies..."
+                                                    placeholder={t("Describe your business, services, prices, opening hours and policies...")}
                                                 />
                                                 <div className="knowledge-save-row">
                                                     <small>
@@ -928,30 +943,29 @@ export default function DashboardPage() {
                                                         onClick={saveKnowledge}
                                                         className="button button-blue"
                                                     >
-                                                        Save information <Check size={14} />
+                                                        {t("Save information")} <Check size={14} />
                                                     </button>
                                                 </div>
                                             </>
                                         ) : (
                                             <p className="knowledge-description">
                                                 {business.description ||
-                                                    "No description added yet. Add your services, opening hours, policies and prices so your assistant can give useful answers."}
+                                                    t("No description added yet. Add your services, opening hours, policies and prices so your assistant can give useful answers.")}
                                             </p>
                                         )}
                                         <div className="knowledge-meta">
                                             <span>
-                                                <BadgeCheck size={14} /> Uses approved business
-                                                information only
+                                                <BadgeCheck size={14} /> {t("Uses approved business information only")}
                                             </span>
-                                            <span>Updated in this browser</span>
+                                            <span>{t("Updated in this browser")}</span>
                                         </div>
                                     </div>
                                     <div className="knowledge-categories">
                                         {[
-                                            "Services & prices",
-                                            "Opening hours",
-                                            "Frequently asked questions",
-                                            "Business policies",
+                                            t("Services & prices"),
+                                            t("Opening hours"),
+                                            t("Frequently asked questions"),
+                                            t("Business policies"),
                                         ].map((item) => (
                                             <div key={item}>
                                                 <span className="category-icon">
@@ -959,7 +973,7 @@ export default function DashboardPage() {
                                                 </span>
                                                 <span>
                                                     <b>{item}</b>
-                                                    <small>Part of your business profile</small>
+                                                    <small>{t("Part of your business profile")}</small>
                                                 </span>
                                                 <Check size={14} />
                                             </div>
@@ -972,14 +986,14 @@ export default function DashboardPage() {
                                 <>
                                     <div className="dashboard-page-heading">
                                         <div>
-                                            <div className="eyebrow">A CLEARER PICTURE</div>
-                                            <h1>Analytics</h1>
+                                            <div className="eyebrow">{t("A CLEARER PICTURE")}</div>
+                                            <h1>{t("Analytics")}</h1>
                                             <p>
-                                                Track the conversations that help your business grow.
+                                                {t("Track the conversations that help your business grow.")}
                                             </p>
                                         </div>
                                         <button className="select-period" type="button" disabled>
-                                            Last 30 days <ChevronDown size={13} />
+                                            {t("Last 30 days")} <ChevronDown size={13} />
                                         </button>
                                     </div>
                                     <div className="metrics-grid">
@@ -995,7 +1009,7 @@ export default function DashboardPage() {
                                                     <Activity size={15} />
                                                 </div>
                                                 <strong>{item.value}</strong>
-                                                <small>Available when a channel is connected</small>
+                                                <small>{t("Available when a channel is connected")}</small>
                                             </article>
                                         ))}
                                     </div>
@@ -1016,11 +1030,11 @@ export default function DashboardPage() {
                                     <div className="dashboard-page-heading">
                                         <div>
                                             <div className="eyebrow">
-                                                MEET CUSTOMERS WHERE THEY ARE
+                                                {t("MEET CUSTOMERS WHERE THEY ARE")}
                                             </div>
-                                            <h1>Channels</h1>
+                                            <h1>{t("Channels")}</h1>
                                             <p>
-                                                Choose where your assistant can talk with customers.
+                                                {t("Choose where your assistant can talk with customers.")}
                                             </p>
                                         </div>
                                     </div>
@@ -1028,37 +1042,37 @@ export default function DashboardPage() {
                                         {[
                                             {
                                                 name: "Website chat",
-                                                detail: "Embed a small chat on your website",
+                                                detail: t("Embed a small chat on your website"),
                                                 icon: Globe2,
                                                 state: "AVAILABLE TO PREVIEW",
                                             },
                                             {
                                                 name: "WhatsApp",
-                                                detail: "Connect your business WhatsApp number",
+                                                detail: t("Connect your business WhatsApp number"),
                                                 icon: MessageCircle,
                                                 state: "NOT CONNECTED",
                                             },
                                             {
                                                 name: "Instagram",
-                                                detail: "Reply to Instagram direct messages",
+                                                detail: t("Reply to Instagram direct messages"),
                                                 icon: MessageCircle,
                                                 state: "COMING SOON",
                                             },
                                             {
                                                 name: "Telegram",
-                                                detail: "Add your Telegram business bot",
+                                                detail: t("Add your Telegram business bot"),
                                                 icon: Send,
                                                 state: "COMING SOON",
                                             },
                                             {
                                                 name: "Facebook",
-                                                detail: "Respond to messages from your page",
+                                                detail: t("Respond to messages from your page"),
                                                 icon: MessageCircle,
                                                 state: "COMING SOON",
                                             },
                                             {
                                                 name: "Kaspi Pay",
-                                                detail: "Payment connection for Kazakhstan",
+                                                detail: t("Payment connection for Kazakhstan"),
                                                 icon: CreditCard,
                                                 state: "PLANNED",
                                             },
@@ -1074,7 +1088,7 @@ export default function DashboardPage() {
                                                 <span
                                                     className={`channel-state ${state === "AVAILABLE TO PREVIEW" ? "channel-available" : ""}`}
                                                 >
-                                                    {state}
+                                                    {t(state)}
                                                 </span>
                                                 <button
                                                     type="button"
@@ -1086,14 +1100,13 @@ export default function DashboardPage() {
                                                         )
                                                     }
                                                 >
-                                                    {state === "AVAILABLE TO PREVIEW" ? "Set up" : ""}
+                                                    {state === "AVAILABLE TO PREVIEW" ? t("Set up") : ""}
                                                 </button>
                                             </article>
                                         ))}
                                     </div>
                                     <div className="integration-disclosure">
-                                        <Sparkles size={15} /> External channels are not connected
-                                        in this preview. No messages will be sent to customers.
+                                        <Sparkles size={15} /> {t("External channels are not connected in this preview. No messages will be sent to customers.")}
                                     </div>
                                 </>
                             )}
@@ -1103,11 +1116,11 @@ export default function DashboardPage() {
                                     <div className="dashboard-page-heading">
                                         <div>
                                             <div className="eyebrow">
-                                                THE DETAILS THAT MAKE IT YOURS
+                                                {t("THE DETAILS THAT MAKE IT YOURS")}
                                             </div>
-                                            <h1>Settings</h1>
+                                            <h1>{t("Settings")}</h1>
                                             <p>
-                                                Manage your business profile and assistant preferences.
+                                                {t("Manage your business profile and assistant preferences.")}
                                             </p>
                                         </div>
                                         <button
@@ -1115,26 +1128,25 @@ export default function DashboardPage() {
                                             className="button button-blue"
                                             onClick={() =>
                                                 setNotice(
-                                                    "Settings are saved automatically in this browser.",
+                                                    t("Settings are saved automatically in this browser."),
                                                 )
                                             }
                                         >
-                                            <Check size={14} /> Save changes
+                                            <Check size={14} /> {t("Save changes")}
                                         </button>
                                     </div>
                                     <section className="dashboard-panel settings-panel">
                                         <div className="panel-heading">
                                             <div>
-                                                <h2>Business profile</h2>
+                                                <h2>{t("Business profile")}</h2>
                                                 <p>
-                                                    Shown to your assistant as approved business
-                                                    information.
+                                                    {t("Shown to your assistant as approved business information.")}
                                                 </p>
                                             </div>
                                         </div>
                                         <div className="settings-fields">
                                             <label>
-                                                Business name
+                                                {t("Business name")}
                                                 <input
                                                     className="dashboard-input"
                                                     value={business.name}
@@ -1144,7 +1156,7 @@ export default function DashboardPage() {
                                                 />
                                             </label>
                                             <label>
-                                                Business type
+                                                {t("Business type")}
                                                 <select
                                                     className="dashboard-input"
                                                     value={business.category}
@@ -1155,31 +1167,31 @@ export default function DashboardPage() {
                                                         )
                                                     }
                                                 >
-                                                    <option>Beauty &amp; wellness</option>
-                                                    <option>Food &amp; hospitality</option>
-                                                    <option>Health &amp; clinics</option>
-                                                    <option>Retail &amp; online shop</option>
-                                                    <option>Auto &amp; home services</option>
-                                                    <option>Other</option>
+                                                    <option value="Beauty & wellness">{t("Beauty & wellness")}</option>
+                                                    <option value="Food & hospitality">{t("Food & hospitality")}</option>
+                                                    <option value="Health & clinics">{t("Health & clinics")}</option>
+                                                    <option value="Retail & online shop">{t("Retail & online shop")}</option>
+                                                    <option value="Auto & home services">{t("Auto & home services")}</option>
+                                                    <option value="Other">{t("Other")}</option>
                                                 </select>
                                             </label>
                                             <label>
-                                                Location
+                                                {t("Location")}
                                                 <input
                                                     className="dashboard-input"
                                                     value={business.location}
-                                                    placeholder="City or address"
+                                                    placeholder={t("City or address")}
                                                     onChange={(event) =>
                                                         updateBusiness("location", event.target.value)
                                                     }
                                                 />
                                             </label>
                                             <label>
-                                                Opening hours
+                                                {t("Opening hours")}
                                                 <input
                                                     className="dashboard-input"
                                                     value={business.hours}
-                                                    placeholder="e.g. Mon–Sat, 10:00–20:00"
+                                                    placeholder={t("e.g. Mon–Sat, 10:00–20:00")}
                                                     onChange={(event) =>
                                                         updateBusiness("hours", event.target.value)
                                                     }
@@ -1190,8 +1202,8 @@ export default function DashboardPage() {
                                     <section className="dashboard-panel settings-panel">
                                         <div className="panel-heading">
                                             <div>
-                                                <h2>Team access</h2>
-                                                <p>Invite a teammate to help with conversations.</p>
+                                                <h2>{t("Team access")}</h2>
+                                                <p>{t("Invite a teammate to help with conversations.")}</p>
                                             </div>
                                             <button
                                                 type="button"
@@ -1199,7 +1211,7 @@ export default function DashboardPage() {
                                                 disabled
                                                 title="Team invitations are not configured"
                                             >
-                                                <Plus size={14} /> Invite member
+                                                <Plus size={14} /> {t("Invite member")}
                                             </button>
                                         </div>
                                         <EmptyState
@@ -1215,9 +1227,9 @@ export default function DashboardPage() {
                                 <>
                                     <div className="dashboard-page-heading">
                                         <div>
-                                            <div className="eyebrow">PLANS THAT GROW WITH YOU</div>
-                                            <h1>Plan &amp; billing</h1>
-                                            <p>Your plan at a glance. No payment details stored.</p>
+                                            <div className="eyebrow">{t("PLANS THAT GROW WITH YOU")}</div>
+                                            <h1>{t("Plan & billing")}</h1>
+                                            <p>{t("Your plan at a glance. No payment details stored.")}</p>
                                         </div>
                                     </div>
                                     <section className="dashboard-panel billing-panel">
@@ -1225,17 +1237,17 @@ export default function DashboardPage() {
                                             <CreditCard size={18} />
                                         </div>
                                         <div className="billing-plan-copy">
-                                            <span className="plan-label">CURRENT PLAN</span>
-                                            <h2>Free</h2>
-                                            <p>Everything you need to try your assistant.</p>
+                                            <span className="plan-label">{t("CURRENT PLAN")}</span>
+                                            <h2>{t("Free")}</h2>
+                                            <p>{t("Everything you need to try your assistant.")}</p>
                                         </div>
                                         <div className="billing-price">
                                             <b>₸0</b>
-                                            <span>per month</span>
+                                            <span>{t("per month")}</span>
                                         </div>
                                         <div className="billing-usage">
                                             <div>
-                                                <span>Monthly conversations</span>
+                                                <span>{t("Monthly conversations")}</span>
                                                 <b>0 / 100</b>
                                             </div>
                                             <div className="usage-track">
@@ -1251,7 +1263,7 @@ export default function DashboardPage() {
                                             disabled
                                             title="Stripe is not connected"
                                         >
-                                            Manage subscription
+                                            {t("Manage subscription")}
                                         </button>
                                     </section>
                                     <div className="billing-plan-grid">
@@ -1268,26 +1280,25 @@ export default function DashboardPage() {
                                             },
                                         ].map((plan) => (
                                             <article key={plan.name}>
-                                                <span className="plan-label">GROWING BUSINESS</span>
+                                                <span className="plan-label">{t("GROWING BUSINESS")}</span>
                                                 <h3>{plan.name}</h3>
                                                 <p>{plan.count} / month</p>
                                                 <div>
                                                     <b>{plan.price}</b>
-                                                    <span> / month</span>
+                                                    <span> / {t("per month")}</span>
                                                 </div>
                                                 <button
                                                     type="button"
                                                     disabled
-                                                    title="Payments are not connected"
+                                                    title="Card payments are not configured"
                                                 >
-                                                    Coming soon
+                                                    {t("Not configured")}
                                                 </button>
                                             </article>
                                         ))}
                                     </div>
                                     <div className="integration-disclosure">
-                                        <CreditCard size={14} /> Billing preview only. Stripe and
-                                        invoices are not connected.
+                                        <CreditCard size={14} /> {t("Billing preview only. Stripe and card payments are not configured. FloralAI never collects card numbers in this preview.")}
                                     </div>
                                 </>
                             )}

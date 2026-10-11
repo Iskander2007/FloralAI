@@ -11,13 +11,15 @@ import {
     Sparkles,
 } from "lucide-react";
 import Link from "next/link";
+import { useLanguage } from "@/components/language-provider";
+import { LanguageSwitcher } from "@/components/language-switcher";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 import {
     BusinessCategory,
     BusinessProfile,
     extractBusinessDetails,
-    useDemoWorkspace,
+    useWorkspaceSession,
     writeWorkspace,
 } from "@/lib/workspace";
 import "../floral-theme.css";
@@ -62,7 +64,8 @@ const tones = [
 
 export default function OnboardingPage() {
     const router = useRouter();
-    const { ready, workspace } = useDemoWorkspace();
+    const { t } = useLanguage();
+    const { ready, workspace, authError } = useWorkspaceSession();
     const [businessDraft, setBusinessDraft] = useState<BusinessProfile | null>(
         null,
     );
@@ -72,10 +75,10 @@ export default function OnboardingPage() {
     const [widgetEnabled, setWidgetEnabled] = useState(true);
 
     useEffect(() => {
-        if (ready && !workspace?.email) {
+        if (ready && !workspace?.email && !authError) {
             router.replace("/signup");
         }
-    }, [ready, router, workspace?.email]);
+    }, [authError, ready, router, workspace?.email]);
 
     function update<K extends keyof BusinessProfile>(
         key: K,
@@ -95,13 +98,20 @@ export default function OnboardingPage() {
         setSaved(true);
     }
 
+    if (authError)
+        return (
+            <main className="onboarding-loading">
+                <p role="alert">{t("Unable to verify your account session.")} {authError}</p>
+            </main>
+        );
+
     if (!ready || !workspace)
         return (
             <main className="onboarding-loading">
                 <span className="loading-mark">
                     <Sparkles size={18} />
                 </span>
-                <p>Preparing your workspace...</p>
+                <p>{t("Preparing your workspace...")}</p>
             </main>
         );
 
@@ -111,26 +121,26 @@ export default function OnboardingPage() {
                 <div className="setup-success-mark">
                     <Check size={26} />
                 </div>
-                <div className="eyebrow">BUILT AROUND YOUR BUSINESS</div>
+                <div className="eyebrow">{t("BUILT AROUND YOUR BUSINESS")}</div>
                 <h1>
-                    Your AI teammate
+                    {t("Your AI teammate")}
                     <br />
-                    <span>is ready to meet you.</span>
+                    <span>{t("is ready to meet you.")}</span>
                 </h1>
                 <p>
-                    We’ve created a first version for {business.name || "your business"}.
-                    You can teach it more and test a conversation in your workspace.
+                    {t("We’ve created a first version for")} {business.name || t("your business")}.
+                    {" "}{t("You can teach it more and test a conversation in your workspace.")}
                 </p>
                 <div className="success-checklist">
                     <span>
-                        <Check size={14} /> Business profile saved
+                        <Check size={14} /> {t("Business profile saved")}
                     </span>
                     <span>
-                        <Check size={14} /> Assistant style set to{" "}
+                        <Check size={14} /> {t("Assistant style set to")}{" "}
                         {business.tone.toLowerCase()}
                     </span>
                     <span>
-                        <Check size={14} /> Demo chat ready to test
+                        <Check size={14} /> {t("Demo chat ready to test")}
                     </span>
                 </div>
                 <button
@@ -138,20 +148,19 @@ export default function OnboardingPage() {
                     className="button button-blue"
                     onClick={() => router.push("/dashboard")}
                 >
-                    Open your workspace <ArrowRight size={15} />
+                    {t("Open your workspace")} <ArrowRight size={15} />
                 </button>
                 <button
                     type="button"
                     className="success-secondary"
                     onClick={() => router.push("/dashboard?view=assistant")}
                 >
-                    Test your AI assistant
+                    {t("Test your AI assistant")}
                 </button>
                 <div className="demo-disclosure">
                     <Sparkles size={14} />
                     <span>
-                        Demo workspace only. Your profile is saved in this browser;
-                        publishing and external channels are not connected.
+                        {t("Demo workspace only. Your profile is saved in this browser; publishing and external channels are not connected.")}
                     </span>
                 </div>
             </main>
@@ -164,15 +173,16 @@ export default function OnboardingPage() {
                     <span className="brand-mark">
                         <Sparkles size={17} />
                     </span>
-                    <span>
+                    <span translate="no" className="brand-name">
                         Floral<span>AI</span>
                     </span>
                 </Link>
+                <LanguageSwitcher />
                 <div className="setup-account">
-                    Setting up for <b>{workspace.email}</b>
+                    {t("Setting up for")} <b>{workspace.email}</b>
                 </div>
                 <Link href="/dashboard" className="setup-exit">
-                    Exit setup <ArrowRight size={14} />
+                    {t("Exit setup")} <ArrowRight size={14} />
                 </Link>
             </header>
             <div className="setup-layout">
@@ -180,25 +190,22 @@ export default function OnboardingPage() {
                     <div className="setup-aside-mark">
                         <Bot size={19} />
                     </div>
-                    <div className="eyebrow">YOUR AI, YOUR RULES</div>
+                    <div className="eyebrow">{t("YOUR AI, YOUR RULES")}</div>
                     <h2>
-                        Built on what
+                        {t("Built on what makes your business yours.").split(" ").slice(0, 2).join(" ")}
                         <br />
-                        makes your
-                        <br />
-                        <span>business yours.</span>
+                        <span>{t("Built on what makes your business yours.").split(" ").slice(2).join(" ")}</span>
                     </h2>
                     <p>
-                        Just the useful bits. Your assistant learns from the details you
-                        choose to share.
+                        {t("Just the useful bits. Your assistant learns from the details you choose to share.")}
                     </p>
                     <div className="setup-aside-footer">
-                        <Globe2 size={15} /> Works in English, Russian &amp; Kazakh
+                        <Globe2 size={15} /> {t("Works in English, Russian & Kazakh")}
                     </div>
                 </aside>
                 <section className="setup-main">
                     <div className="setup-progress-head">
-                        <span>LET&apos;S GET YOU SET UP</span>
+                        <span>{t("LET'S GET YOU SET UP")}</span>
                         <span>
                             {step + 1} <i>/</i> 5
                         </span>
@@ -209,26 +216,24 @@ export default function OnboardingPage() {
                     {step === 0 && (
                         <form className="setup-form" onSubmit={next}>
                             <div className="step-eyebrow">
-                                STEP 01 <i /> THE BASICS
+                                {t("STEP 01")} <i /> {t("THE BASICS")}
                             </div>
                             <h1>
-                                What should we call
-                                <br />
-                                your business?
+                                {t("What should we call your business?")}
                             </h1>
-                            <p>Start with the name customers know you by.</p>
-                            <label htmlFor="business-name">Business name</label>
+                            <p>{t("Start with the name customers know you by.")}</p>
+                            <label htmlFor="business-name">{t("Business name")}</label>
                             <input
                                 autoFocus
                                 id="business-name"
                                 required
                                 maxLength={80}
-                                placeholder="e.g. Mira Studio"
+                                placeholder={t("e.g. Mira Studio")}
                                 value={business.name}
                                 onChange={(event) => update("name", event.target.value)}
                             />
                             <label htmlFor="business-type">
-                                What kind of business is it?
+                                {t("What kind of business is it?")}
                             </label>
                             <select
                                 id="business-type"
@@ -238,13 +243,13 @@ export default function OnboardingPage() {
                                 }
                             >
                                 {categories.map((category) => (
-                                    <option key={category}>{category}</option>
+                                    <option key={category} value={category}>{t(category)}</option>
                                 ))}
                             </select>
                             <div className="setup-actions">
-                                <span>About 2 minutes left</span>
+                                <span>{t("About 2 minutes left")}</span>
                                 <button className="button button-blue" type="submit">
-                                    Continue <ArrowRight size={15} />
+                                    {t("Continue")} <ArrowRight size={15} />
                                 </button>
                             </div>
                         </form>
@@ -252,25 +257,22 @@ export default function OnboardingPage() {
                     {step === 1 && (
                         <form className="setup-form" onSubmit={next}>
                             <div className="step-eyebrow">
-                                STEP 02 <i /> THE GOOD DETAILS
+                                {t("STEP 02")} <i /> {t("THE GOOD DETAILS")}
                             </div>
                             <h1>
-                                Tell us about your
-                                <br />
-                                business, your way.
+                                {t("Tell us about your business, your way.")}
                             </h1>
                             <p>
-                                A couple of sentences are plenty. We&apos;ll find the useful
-                                details for you.
+                                {t("A couple of sentences are plenty. We’ll find the useful details for you.")}
                             </p>
                             <label htmlFor="business-description">
-                                A little about what you do
+                                {t("A little about what you do")}
                             </label>
                             <textarea
                                 autoFocus
                                 id="business-description"
                                 rows={5}
-                                placeholder="We’re a neighborhood salon in Almaty. Open every day, 10:00 to 21:00. Men’s haircut is 8,000 ₸..."
+                                placeholder={t("Describe your business in a couple of sentences...")}
                                 value={business.description}
                                 onChange={(event) => update("description", event.target.value)}
                             />
@@ -291,38 +293,38 @@ export default function OnboardingPage() {
                                 }}
                             >
                                 {" "}
-                                <Sparkles size={14} /> Find business details
+                                <Sparkles size={14} /> {t("Find business details")}
                             </button>
                             {(business.location ||
                                 business.hours ||
                                 business.services.length > 0) && (
                                     <div className="extracted-box">
                                         <strong>
-                                            Here&apos;s what we found. Edit anything that needs a tweak.
+                                            {t("Here’s what we found. Edit anything that needs a tweak.")}
                                         </strong>
                                         <div className="extracted-grid">
                                             <label>
-                                                Location
+                                                {t("Location")}
                                                 <input
                                                     value={business.location}
                                                     onChange={(event) =>
                                                         update("location", event.target.value)
                                                     }
-                                                    placeholder="City or address"
+                                                    placeholder={t("City or address")}
                                                 />
                                             </label>
                                             <label>
-                                                Opening hours
+                                                {t("Opening hours")}
                                                 <input
                                                     value={business.hours}
                                                     onChange={(event) =>
                                                         update("hours", event.target.value)
                                                     }
-                                                    placeholder="e.g. 10:00–21:00"
+                                                    placeholder={t("e.g. 10:00–21:00")}
                                                 />
                                             </label>
                                             <label className="extracted-services">
-                                                Services or prices
+                                                {t("Services or prices")}
                                                 <input
                                                     value={business.services.join(", ")}
                                                     onChange={(event) =>
@@ -334,7 +336,7 @@ export default function OnboardingPage() {
                                                                 .filter(Boolean),
                                                         )
                                                     }
-                                                    placeholder="e.g. Cut — 8,000 ₸"
+                                                    placeholder={t("e.g. Cut — 8,000 ₸")}
                                                 />
                                             </label>
                                         </div>
@@ -346,10 +348,10 @@ export default function OnboardingPage() {
                                     type="button"
                                     onClick={() => setStep(0)}
                                 >
-                                    <ArrowLeft size={14} /> Back
+                                    <ArrowLeft size={14} /> {t("Back")}
                                 </button>
                                 <button className="button button-blue" type="submit">
-                                    Continue <ArrowRight size={15} />
+                                    {t("Continue")} <ArrowRight size={15} />
                                 </button>
                             </div>
                         </form>
@@ -357,16 +359,13 @@ export default function OnboardingPage() {
                     {step === 2 && (
                         <form className="setup-form" onSubmit={next}>
                             <div className="step-eyebrow">
-                                STEP 03 <i /> A LITTLE PERSONALITY
+                                {t("STEP 03")} <i /> {t("A LITTLE PERSONALITY")}
                             </div>
                             <h1>
-                                How should your
-                                <br />
-                                assistant sound?
+                                {t("How should your assistant sound?")}
                             </h1>
                             <p>
-                                Pick the style that feels most like your business. You can
-                                change this later.
+                                {t("Pick the style that feels most like your business. You can change this later.")}
                             </p>
                             <div className="tone-options">
                                 {tones.map((tone) => (
@@ -387,7 +386,7 @@ export default function OnboardingPage() {
                                     </button>
                                 ))}
                             </div>
-                            <label htmlFor="language">Main conversation language</label>
+                            <label htmlFor="language">{t("Main conversation language")}</label>
                             <select
                                 id="language"
                                 value={business.language}
@@ -398,9 +397,9 @@ export default function OnboardingPage() {
                                     )
                                 }
                             >
-                                <option>English</option>
-                                <option>Russian</option>
-                                <option>Kazakh</option>
+                                <option value="English">{t("English")}</option>
+                                <option value="Russian">{t("Russian")}</option>
+                                <option value="Kazakh">{t("Kazakh")}</option>
                             </select>
                             <div className="setup-actions">
                                 <button
@@ -408,10 +407,10 @@ export default function OnboardingPage() {
                                     type="button"
                                     onClick={() => setStep(1)}
                                 >
-                                    <ArrowLeft size={14} /> Back
+                                    <ArrowLeft size={14} /> {t("Back")}
                                 </button>
                                 <button className="button button-blue" type="submit">
-                                    Continue <ArrowRight size={15} />
+                                    {t("Continue")} <ArrowRight size={15} />
                                 </button>
                             </div>
                         </form>
@@ -419,21 +418,21 @@ export default function OnboardingPage() {
                     {step === 3 && (
                         <div className="setup-form">
                             <div className="step-eyebrow">
-                                STEP 04 <i /> WHERE TO FIND YOU
+                                {t("STEP 04")} <i /> {t("WHERE TO FIND YOU")}
                             </div>
                             <h1>
-                                Meet your customers
+                                {t("Meet your customers")}
                                 <br />
-                                where they are.
+                                {t("where they are.")}
                             </h1>
-                            <p>Choose a starting point. You can add more channels anytime.</p>
+                            <p>{t("Choose a starting point. You can add more channels anytime.")}</p>
                             <div className="channel-option channel-active">
                                 <span className="channel-icon channel-web">
                                     <Globe2 size={17} />
                                 </span>
                                 <span>
-                                    <b>Website chat</b>
-                                    <small>A chat widget for your website</small>
+                                    <b>{t("Website chat")}</b>
+                                    <small>{t("A chat widget for your website")}</small>
                                 </span>
                                 <span className="channel-toggle">
                                     <i />
@@ -446,9 +445,9 @@ export default function OnboardingPage() {
                                     </span>
                                     <span>
                                         <b>{channel}</b>
-                                        <small>External connection not configured</small>
+                                        <small>{t("External connection not configured")}</small>
                                     </span>
-                                    <span className="coming-soon">COMING SOON</span>
+                                    <span className="coming-soon">{t("COMING SOON")}</span>
                                 </div>
                             ))}
                             <div className="setup-actions">
@@ -457,14 +456,14 @@ export default function OnboardingPage() {
                                     type="button"
                                     onClick={() => setStep(2)}
                                 >
-                                    <ArrowLeft size={14} /> Back
+                                    <ArrowLeft size={14} /> {t("Back")}
                                 </button>
                                 <button
                                     className="button button-blue"
                                     type="button"
                                     onClick={() => setStep(4)}
                                 >
-                                    Review assistant <ArrowRight size={15} />
+                                    {t("Review assistant")} <ArrowRight size={15} />
                                 </button>
                             </div>
                         </div>
@@ -472,16 +471,14 @@ export default function OnboardingPage() {
                     {step === 4 && (
                         <div className="setup-form">
                             <div className="step-eyebrow">
-                                STEP 05 <i /> READY WHEN YOU ARE
+                                {t("STEP 05")} <i /> {t("READY WHEN YOU ARE")}
                             </div>
                             <h1>
-                                One last look.
-                                <br />
-                                Then say hello.
+                                {t("One last look.")}
+                                <br />{t("Then say hello.")}
                             </h1>
                             <p>
-                                Your assistant starts in draft mode. You can test it before
-                                anything goes live.
+                                {t("Your assistant starts in draft mode. You can test it before anything goes live.")}
                             </p>
                             <div className="review-card">
                                 <div className="review-card-head">
@@ -492,24 +489,24 @@ export default function OnboardingPage() {
                                         <b>{business.name || "Your business"}</b>
                                         <small>{business.category}</small>
                                     </div>
-                                    <span className="draft-pill">DRAFT</span>
+                                    <span className="draft-pill">{t("DRAFT")}</span>
                                 </div>
                                 <div className="review-divider" />
                                 <div className="review-row">
-                                    <span>Personality</span>
+                                    <span>{t("Personality")}</span>
                                     <b>
                                         {business.tone} · {business.language}
                                     </b>
                                 </div>
                                 <div className="review-row">
-                                    <span>Business info</span>
+                                    <span>{t("Business info")}</span>
                                     <b>{business.description ? "Added" : "Add later"}</b>
                                 </div>
                                 <div className="review-row">
-                                    <span>Website widget</span>
+                                    <span>{t("Website widget")}</span>
                                     <button
                                         className={`small-switch ${widgetEnabled ? "on" : ""}`}
-                                        aria-label="Toggle website chat"
+                                        aria-label={t("Toggle website chat")}
                                         type="button"
                                         onClick={() => setWidgetEnabled((enabled) => !enabled)}
                                     >
@@ -519,8 +516,7 @@ export default function OnboardingPage() {
                                 <div className="review-note">
                                     <Sparkles size={14} />
                                     <span>
-                                        Nothing is published. Your assistant is private until you
-                                        choose otherwise.
+                                        {t("Nothing is published. Your assistant is private until you choose otherwise.")}
                                     </span>
                                 </div>
                             </div>
@@ -530,14 +526,14 @@ export default function OnboardingPage() {
                                     type="button"
                                     onClick={() => setStep(3)}
                                 >
-                                    <ArrowLeft size={14} /> Back
+                                    <ArrowLeft size={14} /> {t("Back")}
                                 </button>
                                 <button
                                     className="button button-blue"
                                     type="button"
                                     onClick={finish}
                                 >
-                                    Create my AI <ArrowRight size={15} />
+                                    {t("Create my AI")} <ArrowRight size={15} />
                                 </button>
                             </div>
                         </div>
@@ -546,9 +542,9 @@ export default function OnboardingPage() {
             </div>
             <footer className="setup-footer">
                 <span>
-                    <MessageCircle size={13} /> Need a hand? hello@floralai.example
+                    <MessageCircle size={13} /> {t("Need a hand?")} hello@floralai.example
                 </span>
-                <span>DEMO SETUP · NOTHING PUBLISHED</span>
+                <span>{t("DEMO SETUP · NOTHING PUBLISHED")}</span>
             </footer>
         </main>
     );

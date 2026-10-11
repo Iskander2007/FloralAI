@@ -21,6 +21,8 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { annualDiscount, plans } from "@/lib/plans";
+import { useLanguage } from "@/components/language-provider";
+import { LanguageSwitcher } from "@/components/language-switcher";
 import { FormEvent, useMemo, useState } from "react";
 import "./floral-theme.css";
 
@@ -183,7 +185,7 @@ function Brand() {
             <span className="brand-mark">
                 <Sparkles size={17} strokeWidth={2.4} />
             </span>
-            <span>
+            <span translate="no" className="brand-name">
                 Floral<span>AI</span>
             </span>
         </Link>
@@ -195,6 +197,7 @@ function ChatDemo({
 }: {
     initialBusiness?: BusinessKey;
 }) {
+    const { t } = useLanguage();
     const [business, setBusiness] = useState<BusinessKey>(initialBusiness);
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [input, setInput] = useState("");
@@ -233,7 +236,7 @@ function ChatDemo({
                     <div>
                         <strong>{profile.name}</strong>
                         <span>
-                            <i className="online-dot" /> Typically replies instantly
+                            <i className="online-dot" /> {t("Typically replies instantly")}
                         </span>
                     </div>
                 </div>
@@ -241,7 +244,7 @@ function ChatDemo({
                     <Sparkles size={13} /> AI
                 </span>
             </div>
-            <div className="chat-business-select" aria-label="Choose demo business">
+            <div className="chat-business-select" aria-label={t("Choose demo business")}>
                 {(Object.keys(businesses) as BusinessKey[]).map((key) => (
                     <button
                         key={key}
@@ -252,16 +255,16 @@ function ChatDemo({
                         }}
                         type="button"
                     >
-                        {businesses[key].label}
+                        {t(businesses[key].label)}
                     </button>
                 ))}
             </div>
             <div className="chat-transcript" aria-live="polite">
-                <div className="chat-date">TODAY, 10:42 AM</div>
+                <div className="chat-date">{t("TODAY, 10:42 AM")}</div>
                 <div className="message-row">
                     <span className="mini-avatar">{profile.mark}</span>
                     <div className="message-bubble assistant-bubble">
-                        {profile.welcome}
+                        {t(profile.welcome)}
                         <span className="message-time">10:42</span>
                     </div>
                 </div>
@@ -299,7 +302,7 @@ function ChatDemo({
                                 type="button"
                                 onClick={() => sendMessage(prompt)}
                             >
-                                {prompt}
+                                {t(prompt)}
                                 <ArrowUpRight size={12} />
                             </button>
                         ))}
@@ -307,22 +310,22 @@ function ChatDemo({
                 )}
                 {messages.length >= 3 && (
                     <div className="chat-nudge">
-                        <span>You&apos;ve seen how it works.</span>
+                        <span>{t("You’ve seen how it works.")}</span>
                         <Link href="/signup">
-                            Create your AI <ArrowRight size={14} />
+                            {t("Create your AI")} <ArrowRight size={14} />
                         </Link>
                     </div>
                 )}
             </div>
             <form className="chat-composer" onSubmit={handleSubmit}>
                 <input
-                    aria-label="Message the AI assistant"
-                    placeholder="Write a message..."
+                    aria-label={t("Message the AI assistant")}
+                    placeholder={t("Write a message...")}
                     value={input}
                     onChange={(event) => setInput(event.target.value)}
                 />
                 <button
-                    aria-label="Send message"
+                    aria-label={t("Send message")}
                     type="submit"
                     disabled={!input.trim() || typing}
                 >
@@ -330,7 +333,8 @@ function ChatDemo({
                 </button>
             </form>
             <div className="chat-footnote">
-                Powered by <strong>FloralAI</strong> <span>Preview demo</span>
+                {t("Powered by")} <strong translate="no">FloralAI</strong>{" "}
+                <span>{t("Preview demo")}</span>
             </div>
         </div>
     );
@@ -391,6 +395,7 @@ const faqs = [
 ];
 
 export default function Home() {
+    const { t } = useLanguage();
     const [menuOpen, setMenuOpen] = useState(false);
     const [openFaq, setOpenFaq] = useState<number | null>(0);
     const [demoOpen, setDemoOpen] = useState(false);
@@ -406,41 +411,42 @@ export default function Home() {
                         aria-label="Main navigation"
                     >
                         <a href="#product" onClick={() => setMenuOpen(false)}>
-                            Product
+                            {t("Product")}
                         </a>
                         <a href="#solutions" onClick={() => setMenuOpen(false)}>
-                            Solutions
+                            {t("Solutions")}
                         </a>
                         <a href="#how" onClick={() => setMenuOpen(false)}>
-                            How it works
+                            {t("How it works")}
                         </a>
                         <Link href="/flower-shop" onClick={() => setMenuOpen(false)}>
-                            Flower shop demo
+                            {t("Flower shop demo")}
                         </Link>
                         <a href="#pricing" onClick={() => setMenuOpen(false)}>
-                            Pricing
+                            {t("Pricing")}
                         </a>
                         <a href="#faq" onClick={() => setMenuOpen(false)}>
-                            FAQ
+                            {t("FAQ")}
                         </a>
                         <div className="mobile-nav-actions">
                             <Link href="/login" className="nav-login">
-                                Log in
+                                {t("Log in")}
                             </Link>
                             <Link href="/signup" className="button button-dark">
-                                Try for free <ArrowRight size={15} />
+                                {t("Try for free")} <ArrowRight size={15} />
                             </Link>
                         </div>
                     </nav>
                     <div className="header-actions">
+                        <LanguageSwitcher />
                         <Link href="/login" className="nav-login">
-                            Log in
+                            {t("Log in")}
                         </Link>
                         <button
                             className="button button-dark button-small"
                             onClick={() => setDemoOpen(true)}
                         >
-                            Try for free <ArrowRight size={15} />
+                            {t("Try for free")} <ArrowRight size={15} />
                         </button>
                     </div>
                     <button
@@ -461,33 +467,32 @@ export default function Home() {
                             <span className="eyebrow-spark">
                                 <Sparkles size={13} />
                             </span>{" "}
-                            YOUR NEW FAVORITE TEAMMATE
+                            {t("YOUR NEW FAVORITE TEAMMATE")}
                         </div>
                         <h1>
-                            Your AI teammate
+                            {t("Your AI teammate")}
                             <br />
-                            for <span>every customer.</span>
+                            {t("for every customer.")}
                         </h1>
                         <p className="hero-description">
-                            FloralAI answers questions, captures leads and books appointments for
-                            your business, around the clock.
+                            {t("FloralAI answers questions, captures leads and books appointments for your business, around the clock.")}
                         </p>
                         <div className="hero-actions">
                             <button
                                 className="button button-blue"
                                 onClick={() => setDemoOpen(true)}
                             >
-                                Try the live demo <ArrowRight size={16} />
+                                {t("Try the live demo")} <ArrowRight size={16} />
                             </button>
                             <a className="button button-outline" href="#live-demo">
-                                <span className="play-icon">▶</span> See how it works
+                                <span className="play-icon">▶</span> {t("See how it works")}
                             </a>
                         </div>
                         <div className="trust-line">
                             <span className="trust-check">
                                 <Check size={12} />
                             </span>{" "}
-                            No credit card <i /> Ready in 5 minutes <i /> Free to try
+                            {t("No credit card")} <i /> {t("Ready in 5 minutes")} <i /> {t("Free to try")}
                         </div>
                         <div className="hero-proof">
                             <div className="proof-avatars">
@@ -497,16 +502,16 @@ export default function Home() {
                                 <span>+</span>
                             </div>
                             <p>
-                                <strong>Made for the people behind small business.</strong>
+                                <strong>{t("Made for the people behind small business.")}</strong>
                                 <br />
-                                From the first hello to the next loyal customer.
+                                {t("From the first hello to the next loyal customer.")}
                             </p>
                         </div>
                     </div>
                     <div className="hero-product">
                         <div className="product-label">
                             <span>
-                                <i className="online-dot" /> LIVE PRODUCT PREVIEW
+                                <i className="online-dot" /> {t("LIVE PRODUCT PREVIEW")}
                             </span>
                             <span>01 / 04</span>
                         </div>
@@ -516,8 +521,8 @@ export default function Home() {
                                 <CalendarCheck2 size={15} />
                             </span>
                             <div>
-                                <b>New appointment</b>
-                                <small>Tomorrow at 17:30</small>
+                                <b>{t("New appointment")}</b>
+                                <small>{t("Tomorrow at 17:30")}</small>
                             </div>
                             <BadgeCheck size={16} className="note-check" />
                         </div>
@@ -526,15 +531,15 @@ export default function Home() {
                                 <MessageCircle size={15} />
                             </span>
                             <div>
-                                <b>Lead captured</b>
-                                <small>Ready for your team</small>
+                                <b>{t("Lead captured")}</b>
+                                <small>{t("Ready for your team")}</small>
                             </div>
                             <ArrowDownRight size={16} className="note-arrow" />
                         </div>
                     </div>
                 </div>
                 <div className="hero-bottom">
-                    <span>BUILT FOR YOUR KIND OF BUSINESS</span>
+                    <span>{t("BUILT FOR YOUR KIND OF BUSINESS")}</span>
                     <div className="business-logos">
                         <span>
                             mira<span className="logo-light">studio</span>
@@ -552,20 +557,19 @@ export default function Home() {
             <section className="benefit-section" id="product">
                 <div className="section-heading">
                     <div>
-                        <div className="eyebrow">MORE TIME FOR THE WORK YOU LOVE</div>
+                        <div className="eyebrow">{t("MORE TIME FOR THE WORK YOU LOVE")}</div>
                         <h2>
-                            Be there for every
+                            {t("Be there for every")}
                             <br />
-                            customer.{" "}
+                            {t("customer.")}{" "}
                             <span>
-                                Without being
+                                {t("Without being")}
                                 <br className="mobile-break" /> on your phone.
                             </span>
                         </h2>
                     </div>
                     <p>
-                        Keep the human touch in your business. Let FloralAI take the repetitive
-                        conversations off your hands.
+                        {t("Keep the human touch in your business. Let FloralAI take the repetitive conversations off your hands.")}
                     </p>
                 </div>
                 <div className="benefit-grid">
@@ -585,28 +589,27 @@ export default function Home() {
             <section className="problem-section">
                 <div className="problem-left">
                     <div className="eyebrow eyebrow-light">
-                        THE EVERYDAY BUSINESS OF BUSINESS
+                        {t("THE EVERYDAY BUSINESS OF BUSINESS")}
                     </div>
                     <h2>
-                        Good customers
+                        {t("Good customers")}
                         <br />
-                        don&apos;t wait around.
+                        {t("don’t wait around.")}
                     </h2>
                     <p>
-                        A late reply shouldn&apos;t be the reason someone books somewhere
-                        else.
+                        {t("A late reply shouldn’t be the reason someone books somewhere else.")}
                     </p>
                     <button
                         className="text-link text-link-light"
                         onClick={() => setDemoOpen(true)}
                     >
-                        Meet your AI teammate <ArrowRight size={16} />
+                        {t("Meet your AI teammate")} <ArrowRight size={16} />
                     </button>
                 </div>
                 <div className="problem-list">
                     <div className="problem-list-head">
-                        <span>Sound familiar?</span>
-                        <span>THAT&apos;S ABOUT TO CHANGE</span>
+                        <span>{t("Sound familiar?")}</span>
+                        <span>{t("THAT’S ABOUT TO CHANGE")}</span>
                     </div>
                     {[
                         "A customer messages while you’re with someone else.",
@@ -616,16 +619,15 @@ export default function Home() {
                     ].map((line, index) => (
                         <div className="problem-row" key={line}>
                             <span className="problem-number">0{index + 1}</span>
-                            <p>{line}</p>
+                            <p>{t(line)}</p>
                             <span className="problem-cross">×</span>
                         </div>
                     ))}
                 </div>
                 <div className="problem-stamp">
                     <span>
-                        ALWAYS
+                        {t("ALWAYS HERE")}
                         <br />
-                        HERE
                     </span>
                     <Sparkles size={18} />
                 </div>
@@ -633,16 +635,14 @@ export default function Home() {
 
             <section className="knowledge-section" id="solutions">
                 <div className="knowledge-copy">
-                    <div className="eyebrow">YOUR BUSINESS, UNDERSTOOD</div>
+                    <div className="eyebrow">{t("YOUR BUSINESS, UNDERSTOOD")}</div>
                     <h2>
-                        It knows your business.
+                        {t("It knows your business.")}
                         <br />
-                        <span>Not just the internet.</span>
+                        <span>{t("Not just the internet.")}</span>
                     </h2>
                     <p>
-                        Give FloralAI your services, prices, hours and policies. It learns what
-                        makes your business yours, then uses those details to help every
-                        customer.
+                        {t("Give FloralAI your services, prices, hours and policies. It learns what makes your business yours, then uses those details to help every customer.")}
                     </p>
                     <div className="knowledge-points">
                         <div>
@@ -650,9 +650,9 @@ export default function Home() {
                                 <Check size={13} />
                             </span>
                             <p>
-                                <b>Answers from your information</b>
+                                <b>{t("Answers from your information")}</b>
                                 <small>
-                                    Services, prices, policies and the details you approve.
+                                    {t("Services, prices, policies and the details you approve.")}
                                 </small>
                             </p>
                         </div>
@@ -661,8 +661,8 @@ export default function Home() {
                                 <Check size={13} />
                             </span>
                             <p>
-                                <b>Honest when it doesn&apos;t know</b>
-                                <small>No guessing. It offers to bring a real person in.</small>
+                                <b>{t("Honest when it doesn’t know")}</b>
+                                <small>{t("No guessing. It offers to bring a real person in.")}</small>
                             </p>
                         </div>
                         <div>
@@ -670,13 +670,13 @@ export default function Home() {
                                 <Check size={13} />
                             </span>
                             <p>
-                                <b>Always your call</b>
-                                <small>Review and edit everything your assistant knows.</small>
+                                <b>{t("Always your call")}</b>
+                                <small>{t("Review and edit everything your assistant knows.")}</small>
                             </p>
                         </div>
                     </div>
                     <Link href="/signup" className="text-link">
-                        Teach it your business <ArrowRight size={16} />
+                        {t("Teach it your business")} <ArrowRight size={16} />
                     </Link>
                 </div>
                 <div className="knowledge-visual">
@@ -687,7 +687,7 @@ export default function Home() {
                                 <i className="window-dot dot-yellow" />
                                 <i className="window-dot dot-green" />
                             </span>
-                            <span>BUSINESS KNOWLEDGE</span>
+                            <span>{t("BUSINESS KNOWLEDGE")}</span>
                             <span>
                                 <Sparkles size={14} />
                             </span>
@@ -702,31 +702,31 @@ export default function Home() {
                                     <Check size={11} /> READY
                                 </span>
                             </div>
-                            <h3>Services &amp; pricing</h3>
+                            <h3>{t("Services & pricing")}</h3>
                             <div className="doc-line doc-line-long" />
                             <div className="doc-entry">
                                 <div>
-                                    <b>Cut &amp; style</b>
+                                    <b>{t("Cut & style")}</b>
                                     <span>60 minutes</span>
                                 </div>
                                 <strong>8,000 ₸</strong>
                             </div>
                             <div className="doc-entry">
                                 <div>
-                                    <b>Color refresh</b>
+                                    <b>{t("Color refresh")}</b>
                                     <span>From 2 hours</span>
                                 </div>
                                 <strong>24,000 ₸</strong>
                             </div>
                             <div className="doc-entry">
                                 <div>
-                                    <b>Signature manicure</b>
+                                    <b>{t("Signature manicure")}</b>
                                     <span>45 minutes</span>
                                 </div>
                                 <strong>9,500 ₸</strong>
                             </div>
                             <div className="doc-foot">
-                                <BadgeCheck size={14} /> Answering from approved information
+                                <BadgeCheck size={14} /> {t("Answering from approved information")}
                             </div>
                         </div>
                     </div>
@@ -734,7 +734,7 @@ export default function Home() {
                         <span className="chip-dot" /> Services
                     </div>
                     <div className="knowledge-chip chip-b">
-                        <span className="chip-dot chip-dot-purple" /> Opening hours
+                        <span className="chip-dot chip-dot-purple" /> {t("Opening hours")}
                     </div>
                     <div className="knowledge-chip chip-c">
                         <span className="chip-dot chip-dot-orange" /> FAQ
@@ -745,17 +745,17 @@ export default function Home() {
             <section className="how-section" id="how">
                 <div className="how-header">
                     <div>
-                        <div className="eyebrow">SIMPLE BY DESIGN</div>
+                        <div className="eyebrow">{t("Simple by design")}</div>
                         <h2>
-                            From “hello” to
+                            {t("From “hello” to")}
                             <br />
-                            <span>ready in minutes.</span>
+                            <span>{t("ready in minutes.")}</span>
                         </h2>
                     </div>
                     <p>
-                        No prompt engineering. No complicated setup.
+                        {t("No prompt engineering. No complicated setup.")}
                         <br />
-                        Just a better way to look after your customers.
+                        {t("Just a better way to look after your customers.")}
                     </p>
                 </div>
                 <div className="steps-grid">
@@ -766,10 +766,9 @@ export default function Home() {
                                 <MessageCircle size={18} />
                             </span>
                         </div>
-                        <h3>Tell us about your business</h3>
+                        <h3>{t("Tell us about your business")}</h3>
                         <p>
-                            Write a few sentences about what you do. That’s all we need to
-                            start.
+                            {t("Write a few sentences about what you do. That’s all we need to start.")}
                         </p>
                         <div className="step-visual step-visual-note">
                             <span>“We’re a neighborhood salon in Almaty...”</span>
@@ -784,14 +783,13 @@ export default function Home() {
                                 <Sparkles size={18} />
                             </span>
                         </div>
-                        <h3>Make it yours</h3>
+                        <h3>{t("Make it yours")}</h3>
                         <p>
-                            FloralAI organises your services, tone and hours into a helpful
-                            assistant.
+                            {t("FloralAI organises your services, tone and hours into a helpful assistant.")}
                         </p>
                         <div className="step-visual step-visual-tags">
                             <span>
-                                Friendly <Check size={11} />
+                                {t("Friendly")} <Check size={11} />
                             </span>
                             <span>Russian + English</span>
                             <span>Bookings</span>
@@ -804,16 +802,16 @@ export default function Home() {
                                 <Bot size={18} />
                             </span>
                         </div>
-                        <h3>Let the good chats begin</h3>
+                        <h3>{t("Let the good chats begin")}</h3>
                         <p>
-                            Test it yourself, then choose where your customers can find it.
+                            {t("Test it yourself, then choose where your customers can find it.")}
                         </p>
                         <div className="step-visual step-visual-live">
                             <span>
-                                <i className="online-dot" /> Assistant is ready
+                                <i className="online-dot" /> {t("Assistant is ready")}
                             </span>
                             <button type="button" onClick={() => setDemoOpen(true)}>
-                                Try a chat <ArrowRight size={12} />
+                                {t("Try a chat")} <ArrowRight size={12} />
                             </button>
                         </div>
                     </article>
@@ -823,25 +821,24 @@ export default function Home() {
             <section className="live-demo-section" id="live-demo">
                 <div className="live-demo-inner">
                     <div className="live-demo-copy">
-                        <div className="eyebrow eyebrow-light">GO ON, ASK IT ANYTHING</div>
+                        <div className="eyebrow eyebrow-light">{t("GO ON, ASK IT ANYTHING")}</div>
                         <h2>
-                            See the conversation
+                            {t("See the conversation")}
                             <br />
-                            before it <span>happens.</span>
+                            {t("before it")} <span>{t("happens.")}</span>
                         </h2>
                         <p>
-                            Choose a business and try a real conversation. The demo uses
-                            sample business information and never asks you to sign up.
+                            {t("Choose a business and try a real conversation. The demo uses sample business information and never asks you to sign up.")}
                         </p>
                         <div className="live-proof-list">
                             <span>
-                                <Check size={14} /> Five business scenarios
+                                <Check size={14} /> {t("Five business scenarios")}
                             </span>
                             <span>
-                                <Check size={14} /> No account needed
+                                <Check size={14} /> {t("No account needed")}
                             </span>
                             <span>
-                                <Check size={14} /> No made-up answers
+                                <Check size={14} /> {t("No made-up answers")}
                             </span>
                         </div>
                         <div className="demo-privacy">
@@ -849,10 +846,9 @@ export default function Home() {
                                 <BadgeCheck size={15} />
                             </span>
                             <p>
-                                <b>A demo, not a real business.</b>
+                                <b>{t("A demo, not a real business.")}</b>
                                 <br />
-                                These sample replies show how FloralAI works. External messaging
-                                channels aren’t connected.
+                                {t("These sample replies show how FloralAI works. External messaging channels aren’t connected.")}
                             </p>
                         </div>
                     </div>
@@ -865,16 +861,15 @@ export default function Home() {
             <section className="solutions-section">
                 <div className="section-heading">
                     <div>
-                        <div className="eyebrow">ONE HELPFUL ASSISTANT</div>
+                        <div className="eyebrow">{t("ONE HELPFUL ASSISTANT")}</div>
                         <h2>
-                            Fits right into
+                            {t("Fits right into")}
                             <br />
-                            <span>your kind of work.</span>
+                            <span>{t("your kind of work.")}</span>
                         </h2>
                     </div>
                     <p>
-                        A salon, a studio, a shop around the corner. Your assistant learns
-                        the details that make your business different.
+                        {t("A salon, a studio, a shop around the corner. Your assistant learns the details that make your business different.")}
                     </p>
                 </div>
                 <div className="solutions-grid">
@@ -917,8 +912,8 @@ export default function Home() {
                             </div>
                             <div className="solution-card-copy">
                                 <div>
-                                    <h3>{item.name}</h3>
-                                    <p>{item.description}</p>
+                                    <h3>{t(item.name)}</h3>
+                                    <p>{t(item.description)}</p>
                                 </div>
                                 <ArrowUpRight size={17} />
                             </div>
@@ -929,49 +924,49 @@ export default function Home() {
 
             <section className="pricing-section" id="pricing">
                 <div className="pricing-heading">
-                    <div className="eyebrow">STRAIGHTFORWARD PRICING</div>
+                    <div className="eyebrow">{t("STRAIGHTFORWARD PRICING")}</div>
                     <h2>
-                        Start small.
+                        {t("Start small.")}
                         <br />
-                        <span>Grow when you’re ready.</span>
+                        <span>{t("Grow when you’re ready.")}</span>
                     </h2>
-                    <p>See what works for your business before you pay a thing.</p>
+                    <p>{t("See what works for your business before you pay a thing.")}</p>
                     <div className="billing-toggle">
                         <button
                             className={!annualBilling ? "active" : ""}
                             type="button"
                             onClick={() => setAnnualBilling(false)}
                         >
-                            Monthly
+                            {t("Monthly")}
                         </button>
                         <button
                             className={annualBilling ? "active" : ""}
                             type="button"
                             onClick={() => setAnnualBilling(true)}
                         >
-                            Yearly <span>Save {Math.round(annualDiscount * 100)}%</span>
+                            {t("Yearly")} <span>{t("Save")} {Math.round(annualDiscount * 100)}%</span>
                         </button>
                     </div>
                 </div>
                 <div className="pricing-grid">
                     <article className="price-card">
-                        <span className="plan-label">A GOOD PLACE TO START</span>
-                        <h3>Free</h3>
-                        <p>Try FloralAI with a real, working demo.</p>
+                        <span className="plan-label">{t("A GOOD PLACE TO START")}</span>
+                        <h3>{t("Free")}</h3>
+                        <p>{t("Try FloralAI with a real, working demo.")}</p>
                         <div className="price">
                             <strong>₸{plans.free.monthlyPriceKzt.toLocaleString("en-US")}</strong>
-                            <span>/ month</span>
+                            <span>/ {t("month")}</span>
                         </div>
                         <Link href="/signup" className="button button-outline price-button">
-                            Start for free <ArrowRight size={15} />
+                            {t("Start for free")} <ArrowRight size={15} />
                         </Link>
                         <div className="price-divider" />
-                        <span className="feature-caption">INCLUDED</span>
+                        <span className="feature-caption">{t("INCLUDED")}</span>
                         {[
                             `${plans.free.messageLimit.toLocaleString("en-US")} conversations / month`,
                             `${plans.free.assistantLimit} AI assistant`,
-                            "Basic business knowledge",
-                            "Essential analytics",
+                            t("Basic business knowledge"),
+                            t("Essential analytics"),
                         ].map((item) => (
                             <div className="price-feature" key={item}>
                                 <Check size={14} /> {item}
@@ -980,21 +975,21 @@ export default function Home() {
                     </article>
                     <article className="price-card price-featured">
                         <div className="popular-tag">MOST POPULAR</div>
-                        <span className="plan-label">FOR YOUR EVERYDAY</span>
-                        <h3>Starter</h3>
-                        <p>More time back, as your business grows.</p>
+                        <span className="plan-label">{t("FOR YOUR EVERYDAY")}</span>
+                        <h3>{t("Starter")}</h3>
+                        <p>{t("More time back, as your business grows.")}</p>
                         <div className="price">
                             <strong>₸{Math.round(plans.starter.monthlyPriceKzt * (annualBilling ? 1 - annualDiscount : 1)).toLocaleString("en-US")}</strong>
-                            <span>{annualBilling ? "/ month, billed yearly" : "/ month"}</span>
+                            <span>{annualBilling ? `/ ${t("month, billed yearly")}` : `/ ${t("month")}`}</span>
                         </div>
                         <Link
                             href="/signup?plan=starter"
                             className="button button-blue price-button"
                         >
-                            Try Starter free <ArrowRight size={15} />
+                            {t("Try Starter free")} <ArrowRight size={15} />
                         </Link>
                         <div className="price-divider" />
-                        <span className="feature-caption">EVERYTHING IN FREE, PLUS</span>
+                        <span className="feature-caption">{t("EVERYTHING IN FREE, PLUS")}</span>
                         {[
                             `${plans.starter.messageLimit.toLocaleString("en-US")} conversations / month`,
                             ...plans.starter.features,
@@ -1005,21 +1000,21 @@ export default function Home() {
                         ))}
                     </article>
                     <article className="price-card">
-                        <span className="plan-label">FOR A BUSY TEAM</span>
-                        <h3>Business</h3>
-                        <p>More assistants and more ways to grow.</p>
+                        <span className="plan-label">{t("FOR A BUSY TEAM")}</span>
+                        <h3>{t("Business")}</h3>
+                        <p>{t("More assistants and more ways to grow.")}</p>
                         <div className="price">
                             <strong>₸{Math.round(plans.business.monthlyPriceKzt * (annualBilling ? 1 - annualDiscount : 1)).toLocaleString("en-US")}</strong>
-                            <span>{annualBilling ? "/ month, billed yearly" : "/ month"}</span>
+                            <span>{annualBilling ? `/ ${t("month, billed yearly")}` : `/ ${t("month")}`}</span>
                         </div>
                         <Link
                             href="/signup?plan=business"
                             className="button button-outline price-button"
                         >
-                            Explore Business <ArrowRight size={15} />
+                            {t("Explore Business")} <ArrowRight size={15} />
                         </Link>
                         <div className="price-divider" />
-                        <span className="feature-caption">EVERYTHING IN STARTER, PLUS</span>
+                        <span className="feature-caption">{t("EVERYTHING IN STARTER, PLUS")}</span>
                         {[
                             `${plans.business.messageLimit.toLocaleString("en-US")} conversations / month`,
                             ...plans.business.features,
@@ -1031,18 +1026,17 @@ export default function Home() {
                     </article>
                 </div>
                 <p className="pricing-footnote">
-                    Prices shown in Kazakhstani tenge. Billing is a product preview;
-                    payments are not connected yet.
+                    {t("Prices shown in Kazakhstani tenge. Billing is a product preview; payments are not connected yet.")}
                 </p>
             </section>
 
             <section className="faq-section" id="faq">
                 <div className="faq-heading">
-                    <div className="eyebrow">A FEW GOOD QUESTIONS</div>
-                    <h2>Good to know.</h2>
-                    <p>Still curious? We’re here to help.</p>
+                    <div className="eyebrow">{t("A FEW GOOD QUESTIONS")}</div>
+                    <h2>{t("Good to know.")}</h2>
+                    <p>{t("Still curious? We’re here to help.")}</p>
                     <a href="mailto:hello@floralai.example" className="text-link">
-                        Talk to our team <ArrowRight size={15} />
+                        {t("Talk to our team")} <ArrowRight size={15} />
                     </a>
                 </div>
                 <div className="faq-list">
@@ -1056,10 +1050,10 @@ export default function Home() {
                                 aria-expanded={openFaq === index}
                                 onClick={() => setOpenFaq(openFaq === index ? null : index)}
                             >
-                                <span>{question}</span>
+                                <span>{t(question)}</span>
                                 <ChevronDown size={17} />
                             </button>
-                            {openFaq === index && <p>{answer}</p>}
+                            {openFaq === index && <p>{t(answer)}</p>}
                         </article>
                     ))}
                 </div>
@@ -1070,20 +1064,20 @@ export default function Home() {
                     <Sparkles size={18} />
                 </div>
                 <div className="eyebrow eyebrow-light">
-                    YOUR NEXT GREAT HIRE IS ALREADY HERE
+                    {t("YOUR NEXT GREAT HIRE IS ALREADY HERE")}
                 </div>
                 <h2>
-                    Give your business
-                    <br />a little more <span>breathing room.</span>
+                    {t("Give your business")}
+                    <br />{t("a little more breathing room.")}
                 </h2>
                 <p>
-                    Set up an AI teammate that makes every customer feel looked after.
+                    {t("Set up an AI teammate that makes every customer feel looked after.")}
                 </p>
                 <Link href="/signup" className="button button-white">
-                    Create your AI for free <ArrowRight size={16} />
+                    {t("Create your AI for free")} <ArrowRight size={16} />
                 </Link>
                 <div className="cta-note">
-                    <Check size={13} /> Start free. No card needed.
+                    <Check size={13} /> {t("Start free. No card needed.")}
                 </div>
             </section>
 
@@ -1091,55 +1085,51 @@ export default function Home() {
                 <div className="footer-top">
                     <div className="footer-brand">
                         <Brand />
-                        <p>
-                            A little more room
-                            <br />
-                            to run your business.
-                        </p>
+                        <p>{t("A little more room to run your business.")}</p>
                     </div>
                     <div className="footer-column">
-                        <span>PRODUCT</span>
-                        <a href="#product">How it works</a>
-                        <a href="#pricing">Pricing</a>
-                        <a href="#live-demo">Try the demo</a>
-                        <Link href="/flower-shop">Flower shop ordering demo</Link>
-                        <Link href="/dashboard">Dashboard preview</Link>
+                        <span>{t("PRODUCT")}</span>
+                        <a href="#product">{t("How it works")}</a>
+                        <a href="#pricing">{t("Pricing")}</a>
+                        <a href="#live-demo">{t("Try the demo")}</a>
+                        <Link href="/flower-shop">{t("Flower shop ordering demo")}</Link>
+                        <Link href="/dashboard">{t("Dashboard preview")}</Link>
                     </div>
                     <div className="footer-column">
-                        <span>BUSINESSES</span>
-                        <a href="#solutions">Beauty &amp; wellness</a>
-                        <a href="#solutions">Food &amp; hospitality</a>
-                        <a href="#solutions">Retail &amp; services</a>
-                        <a href="#solutions">All businesses</a>
+                        <span>{t("BUSINESSES")}</span>
+                        <a href="#solutions">{t("Beauty & wellness")}</a>
+                        <a href="#solutions">{t("Food & hospitality")}</a>
+                        <a href="#solutions">{t("Retail & services")}</a>
+                        <a href="#solutions">{t("All businesses")}</a>
                     </div>
                     <div className="footer-column">
-                        <span>COMPANY</span>
-                        <a href="#faq">FAQ</a>
-                        <a href="mailto:hello@floralai.example">Contact</a>
-                        <a href="#privacy">Privacy</a>
-                        <a href="#terms">Terms</a>
+                        <span>{t("COMPANY")}</span>
+                        <a href="#faq">{t("FAQ")}</a>
+                        <a href="mailto:hello@floralai.example">{t("Contact")}</a>
+                        <a href="#privacy">{t("Privacy")}</a>
+                        <a href="#terms">{t("Terms")}</a>
                     </div>
                     <div className="footer-signup">
-                        <span>A BETTER KIND OF BUSY</span>
-                        <p>Explore a real sample conversation with FloralAI.</p>
+                        <span>{t("A BETTER KIND OF BUSY")}</span>
+                        <p>{t("Explore a real sample conversation with FloralAI.")}</p>
                         <button
                             className="button button-outline footer-demo-button"
                             type="button"
                             onClick={() => setDemoOpen(true)}
                         >
-                            Try the live demo <ArrowRight size={14} />
+                            {t("Try the live demo")} <ArrowRight size={14} />
                         </button>
-                        <small>No account or channel connection needed.</small>
+                        <small>{t("No account or channel connection needed.")}</small>
                     </div>
                 </div>
                 <div className="footer-bottom">
-                    <span>© 2026 FloralAI. Made for the independently minded.</span>
+                    <span>{t("© 2026 FloralAI. Made for the independently minded.")}</span>
                     <span className="footer-status">
-                        <i className="online-dot" /> ALL SYSTEMS OPERATIONAL
+                        <i className="online-dot" /> {t("ALL SYSTEMS OPERATIONAL")}
                     </span>
                     <div>
-                        <a href="#privacy">Privacy</a>
-                        <a href="#terms">Terms</a>
+                        <a href="#privacy">{t("Privacy")}</a>
+                        <a href="#terms">{t("Terms")}</a>
                     </div>
                 </div>
             </footer>
@@ -1160,20 +1150,20 @@ export default function Home() {
                     >
                         <div className="modal-heading">
                             <div>
-                                <span className="eyebrow">NO SIGN-UP NEEDED</span>
-                                <h2 id="demo-title">Meet your new teammate.</h2>
+                                <span className="eyebrow">{t("NO SIGN-UP NEEDED")}</span>
+                                <h2 id="demo-title">{t("Meet your new teammate.")}</h2>
                             </div>
                             <button
                                 type="button"
                                 className="icon-button"
                                 onClick={() => setDemoOpen(false)}
-                                aria-label="Close demo"
+                                aria-label={t("Close demo")}
                             >
                                 <X size={19} />
                             </button>
                         </div>
                         <p className="modal-description">
-                            Choose a business, ask anything, and see how FloralAI responds.
+                            {t("Choose a business, ask anything, and see how FloralAI responds.")}
                         </p>
                         <ChatDemo />
                     </section>

@@ -1,4 +1,5 @@
-import { useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 export type BusinessCategory =
     | "Beauty & wellness"
@@ -63,6 +64,65 @@ export function useDemoWorkspace() {
     } catch {
         return { ready: true, workspace: null };
     }
+}
+
+export function useWorkspaceSession() {
+    const local = useDemoWorkspace();
+    const [authState, setAuthState] = useState<{
+        ready: boolean;
+        error: string | null;
+    }>(() =>
+        createSupabaseBrowserClient()
+            ? { ready: false, error: null }
+            : { ready: true, error: null },
+    );
+
+    useEffect(() => {
+        const supabase = createSupabaseBrowserClient();
+        if (!supabase) return;
+
+        let cancelled = false;
+        void supabase.auth.getUser().then(({ data, error }) => {
+            if (cancelled) return;
+            if (error) {
+                setAuthState({ ready: true, error: error.message });
+                return;
+            }
+
+            const email = data.user?.email;
+            if (email) {
+                const existing = readWorkspace();
+                const sameAccount =
+                    existing?.email.toLowerCase() === email.toLowerCase();
+                writeWorkspace({
+                    email,
+                    business: sameAccount ? existing?.business ?? null : null,
+                    assistantPublished: sameAccount
+                        ? existing?.assistantPublished ?? false
+                        : false,
+                });
+            }
+            setAuthState({ ready: true, error: null });
+        }).catch((error: unknown) => {
+            if (cancelled) return;
+            setAuthState({
+                ready: true,
+                error: error instanceof Error
+                    ? error.message
+                    : "Unable to verify your account session.",
+            });
+        });
+
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
+    return {
+        ready: local.ready && authState.ready,
+        workspace: local.workspace,
+        authError: authState.error,
+    };
 }
 
 function notifyWorkspaceChange() {
