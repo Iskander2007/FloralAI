@@ -43,7 +43,12 @@ export async function GET(request?: Request) {
     if (authError || !data.user) {
         return NextResponse.json({ error: "Войдите, чтобы посмотреть заказы." }, { status: 401 });
     }
-    const encodedCursor = request ? new URL(request.url).searchParams.get("after") : null;
+    const parameters = request ? new URL(request.url).searchParams : null;
+    const status = parameters?.get("status") ?? null;
+    if (status !== null && !Object.hasOwn(statusTransitions, status)) {
+        return NextResponse.json({ error: "Неизвестный статус заявки. Выберите статус из списка." }, { status: 400 });
+    }
+    const encodedCursor = parameters?.get("after") ?? null;
     const cursor = encodedCursor === null ? null : parseCursor(encodedCursor);
     if (encodedCursor !== null && !cursor) {
         return NextResponse.json({ error: "Неверный указатель страницы. Обновите список заявок." }, { status: 400 });
@@ -54,6 +59,7 @@ export async function GET(request?: Request) {
         .order("created_at", { ascending: false })
         .order("id", { ascending: false })
         .limit(pageSize + 1);
+    if (status !== null) query = query.eq("status", status);
     if (cursor) {
         query = query.or(`created_at.lt.${cursor.created_at},and(created_at.eq.${cursor.created_at},id.lt.${cursor.id})`);
     }

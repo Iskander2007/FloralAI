@@ -38,9 +38,9 @@ const profile = {
 };
 
 function installContext({ rows = {}, commit, user = { id: owner } } = {}) {
-    const context = { sends: [], media: [], queries: [], commits: [], updates: [], rows };
+    const context = { sends: [], media: [], queries: [], commits: [], updates: [], rows, user };
     context.admin = {
-        auth: { getUser: async () => ({ data: { user }, error: null }) },
+        auth: { getUser: async () => ({ data: { user: context.user }, error: null }) },
         from(table) {
             const filters = [];
             const ordering = [];
@@ -67,7 +67,10 @@ function installContext({ rows = {}, commit, user = { id: owner } } = {}) {
                     const result = tableRows.filter((row) => filters.every(([column, value]) => String(row[column]) === String(value)))
                         .filter((row) => !cursorFilter || row.created_at < cursorFilter.created_at
                             || (row.created_at === cursorFilter.created_at && row.id < cursorFilter.id))
-                        .map((row) => update ? { ...row, ...update } : row);
+                        .map((row) => {
+                            if (update) Object.assign(row, update);
+                            return row;
+                        });
                     result.sort((left, right) => {
                         for (const [column, ascending] of ordering) {
                             const comparison = left[column] < right[column] ? -1 : left[column] > right[column] ? 1 : 0;
@@ -401,4 +404,172 @@ test("owner status updates write only status and include optimistic tenant filte
     assert.equal((await orderApi.PATCH(patch)).status, 200);
     assert.deepEqual(context.updates, [{ status: "confirmed" }]);
     assert.deepEqual(context.queries.at(-1).filters, [["id", id], ["owner_id", owner], ["status", "awaiting_confirmation"]]);
+});
+
+function statusRequest(id, status) {
+    const url = "https://floral.example/api/orders";
+    return Object.assign(new Request(url, {
+        method: "PATCH", body: JSON.stringify({ id, status }),
+    }), { nextUrl: new URL(url) });
+}
+
+test("a confirmed Telegram checkout appears only for its owner and can be started then fulfilled", async () => {
+    const rows = { ...businessRows(), sales_orders: [] };
+    const context = installContext({ rows, commit: (args, current) => {
+        const business = current.rows.telegram_businesses.find((entry) => entry.id === args.p_business_id);
+        assert.ok(business);
+        const previousChat = current.rows.telegram_chats[0];
+        assert.equal(args.p_expected_revision, previousChat.revision);
+        if (args.p_order) {
+            const { draft } = args.p_order;
+            current.rows.sales_orders.push({
+                id: args.p_order.id,
+                owner_id: business.owner_id,
+                business_id: business.id,
+                chat_id: args.p_chat_id,
+                source_update_id: args.p_update_id,
+                created_at: "2026-10-13T05:30:12.123456+00:00",
+                status: "awaiting_confirmation",
+                customer_name: draft.customerName,
+                customer_phone: draft.customerPhone.replace(/[^0-9+]/g, ""),
+                delivery_address: draft.deliveryAddress,
+                delivery_date: draft.deliveryDate,
+                occasion: draft.occasion,
+                note: draft.note,
+                product_id: args.p_order.product_id,
+                product_name: args.p_order.expected_product_name,
+                product_price_kzt: args.p_order.expected_price_kzt,
+                delivery_fee_kzt: args.p_order.expected_delivery_fee_kzt,
+                total_kzt: args.p_order.expected_delivery_fee_kzt === null ? null
+                    : args.p_order.expected_price_kzt + args.p_order.expected_delivery_fee_kzt,
+            });
+        }
+        current.rows.telegram_chats[0] = {
+            ...previousChat, last_update_id: args.p_update_id, last_reply: args.p_reply,
+            revision: previousChat.revision + 1, state: args.p_state,
+        };
+        return { data: { outcome: "committed", reply: args.p_reply }, error: null };
+    } });
+    const messages = [
+        "Маме на день рождения", "15000", "1", "Айдана", "+7 777 123 45 67",
+        "Алматы, Абая 12", "Завтра после 15:00", "Подтверждаю",
+    ];
+    for (const [index, message] of messages.entries()) {
+        assert.equal((await webhook.POST(request(message, 12 + index))).status, 200);
+        assert.equal(rows.sales_orders.length, index === messages.length - 1 ? 1 : 0,
+            "the order is created only after the customer explicitly confirms the review");
+    }
+    const response = await orderApi.GET();
+    assert.equal(response.status, 200);
+    const [order] = (await response.json()).orders;
+    assert.match(order.id, /^[0-9a-f-]{36}$/i);
+    assert.equal(order.status, "awaiting_confirmation");
+    assert.equal(order.owner_id, owner);
+    assert.equal(order.customer_name, "Айдана");
+    assert.equal(order.customer_phone, "+77771234567");
+    assert.equal(order.delivery_address, "Алматы, Абая 12");
+    assert.equal(order.delivery_date, "Завтра после 15:00");
+    assert.equal(order.product_id, product.id);
+    assert.equal(order.product_name, product.name);
+    assert.equal(order.product_price_kzt, 12000);
+    assert.equal(order.total_kzt, null);
+    assert.equal(context.commits.filter(({ args }) => args.p_order).length, 1);
+
+    // Telegram retries must not create an extra request after the successful commit.
+    assert.equal((await webhook.POST(request("Подтверждаю", 19))).status, 200);
+    assert.equal(rows.sales_orders.length, 1);
+    assert.equal(context.commits.length, messages.length);
+
+    context.user = { id: "10000000-0000-4000-8000-000000000002" };
+    assert.deepEqual((await (await orderApi.GET()).json()).orders, []);
+    assert.equal((await orderApi.PATCH(statusRequest(order.id, "confirmed"))).status, 404);
+    assert.equal(rows.sales_orders[0].status, "awaiting_confirmation");
+
+    context.user = { id: owner };
+    for (const status of ["confirmed", "fulfilled"]) {
+        const changed = await orderApi.PATCH(statusRequest(order.id, status));
+        assert.equal(changed.status, 200);
+        assert.equal((await changed.json()).order.status, status);
+        const refreshed = (await (await orderApi.GET()).json()).orders;
+        assert.equal(refreshed[0].status, status, "status remains saved after refreshing the owner list");
+        assert.equal(refreshed[0].customer_name, "Айдана");
+    }
+    for (const status of ["confirmed", "awaiting_confirmation", "cancelled"]) {
+        assert.equal((await orderApi.PATCH(statusRequest(order.id, status))).status, 409);
+    }
+    assert.equal(rows.sales_orders[0].status, "fulfilled");
+    assert.deepEqual(context.updates, [{ status: "confirmed" }, { status: "fulfilled" }]);
+});
+
+test("a cancelled request remains cancelled and cannot be resumed or fulfilled", async () => {
+    const id = "40000000-0000-4000-8000-000000000001";
+    const rows = { sales_orders: [{ id, owner_id: owner, status: "awaiting_confirmation" }] };
+    const context = installContext({ rows });
+    assert.equal((await orderApi.PATCH(statusRequest(id, "cancelled"))).status, 200);
+    for (const status of ["awaiting_confirmation", "confirmed", "fulfilled"]) {
+        assert.equal((await orderApi.PATCH(statusRequest(id, status))).status, 409);
+    }
+    assert.equal((await (await orderApi.GET()).json()).orders[0].status, "cancelled");
+    assert.deepEqual(context.updates, [{ status: "cancelled" }]);
+});
+
+test("status filtering applies before pagination and scopes every page to the owner", async () => {
+    const createdAt = "2026-10-13T05:30:12.123456+00:00";
+    const idFor = (index) => `40000000-0000-4000-8000-${String(index).padStart(12, "0")}`;
+    const rows = { sales_orders: [
+        ...Array.from({ length: 121 }, (_, index) => ({
+            id: idFor(index + 1), owner_id: owner, created_at: createdAt, status: "confirmed",
+        })),
+        ...Array.from({ length: 70 }, (_, index) => ({
+            id: idFor(index + 200), owner_id: owner, created_at: createdAt, status: "awaiting_confirmation",
+        })),
+        ...Array.from({ length: 60 }, (_, index) => ({
+            id: idFor(index + 300), owner_id: "other", created_at: createdAt, status: "confirmed",
+        })),
+    ] };
+    const context = installContext({ rows });
+    const getPage = (cursor) => orderApi.GET(new Request(
+        `https://floral.example/api/orders?status=confirmed${cursor ? `&after=${cursor}` : ""}`,
+    )).then((response) => response.json());
+    const first = await getPage();
+    assert.equal(first.orders.length, 50);
+    assert.equal(first.orders[0].id, idFor(121));
+    assert.equal(first.orders.at(-1).id, idFor(72));
+    assert.ok(first.nextCursor);
+    const second = await getPage(first.nextCursor);
+    assert.equal(second.orders.length, 50);
+    assert.equal(second.orders[0].id, idFor(71));
+    assert.equal(second.orders.at(-1).id, idFor(22));
+    const third = await getPage(second.nextCursor);
+    assert.equal(third.orders.length, 21);
+    assert.equal(third.orders.at(-1).id, idFor(1));
+    assert.equal(third.nextCursor, null);
+    const allOrders = [...first.orders, ...second.orders, ...third.orders];
+    assert.equal(new Set(allOrders.map(({ id }) => id)).size, 121);
+    assert.ok(allOrders.every((order) => order.owner_id === owner && order.status === "confirmed"));
+    for (const query of context.queries) {
+        assert.deepEqual(query.filters, [["owner_id", owner], ["status", "confirmed"]]);
+        assert.deepEqual(query.ordering, [["created_at", false], ["id", false]]);
+        assert.equal(query.rowLimit, 51);
+    }
+    assert.deepEqual(context.queries[1].cursorFilter, { created_at: createdAt, id: idFor(72) });
+});
+
+test("each supported status can be filtered and invalid filters never query order storage", async () => {
+    const statuses = ["awaiting_confirmation", "confirmed", "fulfilled", "cancelled"];
+    const context = installContext({ rows: { sales_orders: statuses.map((status, index) => ({
+        id: `40000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`,
+        owner_id: owner, status, created_at: "2026-10-13T05:30:12.123456+00:00",
+    })) } });
+    for (const status of statuses) {
+        const response = await orderApi.GET(new Request(`https://floral.example/api/orders?status=${status}`));
+        assert.equal(response.status, 200);
+        assert.deepEqual((await response.json()).orders.map((order) => order.status), [status]);
+    }
+    const queriesBeforeInvalid = context.queries.length;
+    for (const status of ["", "all", "pending", "awaiting_payment", "CONFIRMED", "confirmed,owner_id.neq.other", "__proto__"]) {
+        const response = await orderApi.GET(new Request(`https://floral.example/api/orders?status=${encodeURIComponent(status)}`));
+        assert.equal(response.status, 400, `must reject status ${JSON.stringify(status)}`);
+    }
+    assert.equal(context.queries.length, queriesBeforeInvalid);
 });

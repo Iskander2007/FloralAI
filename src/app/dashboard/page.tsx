@@ -53,7 +53,6 @@ type View =
     | "overview"
     | "assistant"
     | "conversations"
-    | "leads"
     | "orders"
     | "knowledge"
     | "catalog"
@@ -80,7 +79,6 @@ const navigation: {
             icon: MessageSquare,
             group: "WORKSPACE",
         },
-        { id: "leads", label: "Leads", icon: Users, group: "WORKSPACE" },
         { id: "orders", label: "Заявки", icon: CalendarDays, group: "WORKSPACE" },
         { id: "catalog", label: "Product catalog", icon: Flower2, group: "BUILD" },
         {
@@ -111,6 +109,7 @@ function subscribeToDashboardView(onChange: () => void) {
 
 function getDashboardView(): View {
     const requested = new URLSearchParams(window.location.search).get("view");
+    if (requested === "leads") return "orders";
     return navigation.find((item) => item.id === requested)?.id ?? "overview";
 }
 
@@ -787,52 +786,6 @@ export default function DashboardPage() {
                                             title="No conversations yet"
                                             copy="When customers message your assistant, the conversation and handoff status will appear here."
                                             action="Test your AI"
-                                            onAction={() => selectView("assistant")}
-                                        />
-                                    </div>
-                                </>
-                            )}
-
-                            {view === "leads" && (
-                                <>
-                                    <div className="dashboard-page-heading">
-                                        <div>
-                                            <div className="eyebrow">{t("CUSTOMER INTEREST")}</div>
-                                            <h1>{t("Leads")}</h1>
-                                            <p>{t("People who asked to hear from your business.")}</p>
-                                        </div>
-                                        <button
-                                            className="button button-outline"
-                                            type="button"
-                                            disabled
-                                        >
-                                            <ArrowDownToLine size={14} /> {t("Export CSV")}
-                                        </button>
-                                    </div>
-                                    <div className="dashboard-panel list-panel">
-                                        <div className="list-toolbar">
-                                            <div className="fake-search">
-                                                <Search size={14} />
-                                                <span>{t("Search leads...")}</span>
-                                            </div>
-                                            <button className="select-period" type="button">
-                                                {t("All statuses")} <ChevronDown size={13} />
-                                            </button>
-                                        </div>
-                                        <div className="lead-table">
-                                            <div className="lead-row lead-head">
-                                                <span>{t("NAME")}</span>
-                                                <span>{t("PHONE")}</span>
-                                                <span>{t("SOURCE")}</span>
-                                                <span>{t("STATUS")}</span>
-                                                <span>{t("CREATED")}</span>
-                                            </div>
-                                        </div>
-                                        <EmptyState
-                                            icon={Users}
-                                            title="No leads yet"
-                                            copy="When your assistant collects a name or contact request, you’ll find it here. No sample data is shown."
-                                            action="Preview the assistant"
                                             onAction={() => selectView("assistant")}
                                         />
                                     </div>

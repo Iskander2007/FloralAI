@@ -310,6 +310,11 @@
     flex: 0 0 auto;
 }
 
+.sales-orders-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.sales-orders-filters { display: flex; flex-wrap: wrap; gap: 8px; }
+.sales-orders-sync { display: grid; gap: 4px; margin: 0; color: var(--business-muted); font-size: 11px; line-height: 1.6; }
+.sales-orders-sync span { font-size: 10px; }
+
 .sales-orders-loading,
 .sales-orders-empty {
     margin: 0;
