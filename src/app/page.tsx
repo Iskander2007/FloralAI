@@ -244,11 +244,16 @@ function ChatDemo({
                     <Sparkles size={13} /> AI
                 </span>
             </div>
-            <div className="chat-business-select" aria-label={t("Choose demo business")}>
+            <div
+                className="chat-business-select"
+                role="group"
+                aria-label={t("Choose demo business")}
+            >
                 {(Object.keys(businesses) as BusinessKey[]).map((key) => (
                     <button
                         key={key}
                         className={business === key ? "selected" : ""}
+                        aria-pressed={business === key}
                         onClick={() => {
                             setBusiness(key);
                             setMessages([]);
@@ -259,7 +264,12 @@ function ChatDemo({
                     </button>
                 ))}
             </div>
-            <div className="chat-transcript" aria-live="polite">
+            <div
+                className="chat-transcript"
+                role="log"
+                aria-label={t("Conversation")}
+                aria-busy={typing}
+            >
                 <div className="chat-date">{t("TODAY, 10:42 AM")}</div>
                 <div className="message-row">
                     <span className="mini-avatar">{profile.mark}</span>
@@ -285,9 +295,9 @@ function ChatDemo({
                     </div>
                 ))}
                 {typing && (
-                    <div className="message-row">
+                    <div className="message-row" role="status" aria-label={t("Assistant is typing")}>
                         <span className="mini-avatar">{profile.mark}</span>
-                        <div className="message-bubble assistant-bubble typing-bubble">
+                        <div className="message-bubble assistant-bubble typing-bubble" aria-hidden="true">
                             <i />
                             <i />
                             <i />
@@ -408,7 +418,7 @@ export default function Home() {
                     <Brand />
                     <nav
                         className={menuOpen ? "nav-open" : ""}
-                        aria-label="Main navigation"
+                        aria-label={t("Main navigation")}
                     >
                         <a href="#product" onClick={() => setMenuOpen(false)}>
                             {t("Product")}
@@ -452,7 +462,7 @@ export default function Home() {
                     <button
                         className="mobile-menu"
                         onClick={() => setMenuOpen((open) => !open)}
-                        aria-label={menuOpen ? "Close menu" : "Open menu"}
+                        aria-label={t(menuOpen ? "Close menu" : "Open menu")}
                         aria-expanded={menuOpen}
                     >
                         {menuOpen ? <X /> : <Menu />}
@@ -511,7 +521,7 @@ export default function Home() {
                     <div className="hero-product">
                         <div className="product-label">
                             <span>
-                                <i className="online-dot" /> {t("LIVE PRODUCT PREVIEW")}
+                                <i className="online-dot" /> {t("INTERACTIVE PRODUCT DEMO")}
                             </span>
                             <span>01 / 04</span>
                         </div>
