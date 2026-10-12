@@ -71,12 +71,12 @@ Before enabling provider calls in production, add authenticated sessions, per-te
 
 ## Authentication setup
 
-Email/password registration and Google OAuth are handled by Supabase Auth when configured. Without the two public Supabase environment variables the app remains in a labelled local demo mode. Passwords are never written to `localStorage`. The business profile and workspace are still browser-local, so authentication does not yet provide multi-device business data or production tenant isolation.
+Email one-time-code sign-in/registration and Google OAuth are handled by Supabase Auth when configured. Without the two public Supabase environment variables the app remains in a labelled local demo mode. Passwords are never written to `localStorage`. The business profile and workspace are still browser-local, so authentication does not yet provide multi-device business data or production tenant isolation.
 
 1. Create a Supabase project and add `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` to `.env.local` and the deployment environment. The old anon key can be used as a fallback.
 2. In Supabase **Authentication → URL Configuration**, set the Site URL to the app origin and allow these exact callback URLs: `http://localhost:3000/auth/callback` for local development and `https://YOUR_DEPLOYMENT_HOST/auth/callback` for production. Do not use a wildcard redirect.
 3. For Google sign-in, create OAuth credentials in Google Cloud Console, enable the Google provider in Supabase, and add the Supabase callback URL shown by its provider settings to the Google OAuth client's authorized redirect URIs. Add the app callback URLs above to Supabase's redirect allow list.
-4. Configure Supabase email confirmation and production SMTP before inviting real users. The confirmation link returns to `/auth/callback?next=/onboarding`.
+4. In **Authentication → Email Templates → Magic Link**, use the `{{ .Token }}` template variable so Supabase sends a six-digit code (rather than only a sign-in link). Configure production SMTP and the email OTP expiry in Supabase before inviting real users. Supabase enforces its OTP request limits; FloralAI also applies a 60-second resend cooldown in the form. Google OAuth continues to use the `/auth/callback` route.
 
 The server checks Supabase users before serving the dashboard when auth is enabled; Next.js proxy refreshes the auth cookie. This is not sufficient production authorization for the rest of the product: API endpoints, order ownership, database records and tenant isolation still need server-side authorization before real business data is used.
 
@@ -110,8 +110,8 @@ The webhook only accepts private Telegram chats, validates Telegram's secret hea
 Do not claim that a channel or integration is live until it has been configured and tested.
 
 - GitHub repository: [Iskander2007/FloralAI](https://github.com/Iskander2007/FloralAI).
-- Live deployment: [FloralAI on Vercel](https://floral-ai-git-main-iskander11.vercel.app).
-- Flower shop demo: [Open the order conversation](https://floral-ai-git-main-iskander11.vercel.app/flower-shop). Catalog and prices are examples; without a configured PostgreSQL database, confirmed orders are not persisted.
+- Live deployment: [FloralAI on Vercel](https://floral-ai-pi.vercel.app).
+- Flower shop demo: [Open the order conversation](https://floral-ai-pi.vercel.app/flower-shop). Catalog and prices are examples; without a configured PostgreSQL database, confirmed orders are not persisted.
 - Database: not configured in production. Set `DATABASE_URL` in Vercel and apply the Prisma schema before using order persistence.
 - Telegram: not connected. Set the server-side bot token, webhook secret, and `NEXT_PUBLIC_APP_URL`, then register the HTTPS webhook using the command above.
 - Payments: card payments are not connected. The demo does not collect money.

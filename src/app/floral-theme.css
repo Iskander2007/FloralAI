@@ -1151,6 +1151,24 @@
     font-size: 14px;
 }
 
+.auth-code-change,
+.auth-code-resend {
+    width: fit-content;
+    padding: 8px 0;
+    border: 0;
+    background: transparent;
+    color: #c7f36b;
+    font: inherit;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.auth-code-change:disabled,
+.auth-code-resend:disabled {
+    color: #97a49a;
+    cursor: not-allowed;
+}
+
 .auth-page .button-blue,
 .setup-page .button-blue {
     border-color: var(--floral-accent);

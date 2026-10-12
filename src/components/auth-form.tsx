@@ -3,7 +3,7 @@
 import { ArrowLeft, ArrowRight, Eye, EyeOff, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { useLanguage } from "@/components/language-provider";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -21,6 +21,9 @@ export function AuthForm({
     const { t } = useLanguage();
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+    const [code, setCode] = useState("");
+    const [codeRequested, setCodeRequested] = useState(false);
+    const [resendCountdown, setResendCountdown] = useState(0);
     const [visible, setVisible] = useState(false);
     const [error, setError] = useState("");
     const [notice, setNotice] = useState("");
@@ -29,73 +32,82 @@ export function AuthForm({
     const authConfigured = supabase !== null;
     const isSignup = mode === "signup";
 
+    useEffect(() => {
+        if (resendCountdown === 0) return;
+        const timer = window.setTimeout(
+            () => setResendCountdown((current) => Math.max(0, current - 1)),
+            1000,
+        );
+        return () => window.clearTimeout(timer);
+    }, [resendCountdown]);
+
+    async function requestCode() {
+        if (!supabase) return;
+        setError("");
+        setNotice("");
+        setBusy(true);
+        const normalizedEmail = email.trim();
+        try {
+            const { error: otpError } = await supabase.auth.signInWithOtp({
+                email: normalizedEmail,
+                options: { shouldCreateUser: isSignup },
+            });
+            if (otpError) throw otpError;
+            setEmail(normalizedEmail);
+            setCode("");
+            setCodeRequested(true);
+            setResendCountdown(60);
+            setNotice(t("We sent a 6-digit sign-in code to your email."));
+        } catch (authError) {
+            setError(
+                authError instanceof Error
+                    ? authError.message
+                    : t("Authentication failed. Please try again."),
+            );
+        } finally {
+            setBusy(false);
+        }
+    }
+
     async function handleSubmit(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
         setError("");
         setNotice("");
 
-        if (
-            isSignup &&
-            supabase &&
-            (password.length < 12 ||
-                !/[a-z]/.test(password) ||
-                !/[A-Z]/.test(password) ||
-                !/\d/.test(password))
-        ) {
-            setError(t("Use at least 12 characters with an uppercase letter, a lowercase letter and a number."));
-            return;
-        }
-
         if (supabase) {
+            if (!codeRequested) {
+                await requestCode();
+                return;
+            }
+            const token = code.replace(/\D/g, "");
+            if (token.length !== 6) {
+                setError(t("Enter the 6-digit code from your email."));
+                return;
+            }
             setBusy(true);
             try {
-                if (isSignup) {
-                    const { data, error: signupError } = await supabase.auth.signUp({
-                        email,
-                        password,
-                        options: {
-                            emailRedirectTo: `${window.location.origin}/auth/callback?next=/onboarding`,
-                        },
-                    });
-                    if (signupError) throw signupError;
-
-                    if (!data.session) {
-                        setNotice(t("Check your email to confirm your account."));
-                        return;
-                    }
-                    const existing = readWorkspace();
-                    const sameAccount =
-                        existing?.email.toLowerCase() === email.toLowerCase();
-                    writeWorkspace({
-                        email: data.user?.email ?? email,
-                        business: sameAccount ? existing?.business ?? null : null,
-                        assistantPublished: sameAccount
-                            ? existing?.assistantPublished ?? false
-                            : false,
-                    });
-                    router.push("/onboarding");
-                    return;
-                }
-
-                const { data, error: loginError } =
-                    await supabase.auth.signInWithPassword({ email, password });
-                if (loginError) throw loginError;
-                const authenticatedEmail = data.user.email;
+                const { data, error: otpError } = await supabase.auth.verifyOtp({
+                    email: email.trim(),
+                    token,
+                    type: "email",
+                });
+                if (otpError) throw otpError;
+                const authenticatedEmail = data.user?.email;
                 if (!authenticatedEmail) {
                     throw new Error(t("The authentication provider did not return an email address."));
                 }
                 const existing = readWorkspace();
+                const sameAccount =
+                    existing?.email.toLowerCase() === authenticatedEmail.toLowerCase();
                 writeWorkspace({
                     email: authenticatedEmail,
-                    business:
-                        existing?.email.toLowerCase() === authenticatedEmail.toLowerCase()
-                            ? existing.business
-                            : null,
-                    assistantPublished: existing?.assistantPublished ?? false,
+                    business: sameAccount ? existing?.business ?? null : null,
+                    assistantPublished: sameAccount
+                        ? existing?.assistantPublished ?? false
+                        : false,
                 });
                 router.push(
-                    existing?.email.toLowerCase() === authenticatedEmail.toLowerCase() &&
-                        existing.business
+                    sameAccount && existing?.business
                         ? "/dashboard"
                         : "/onboarding",
                 );
@@ -203,40 +215,103 @@ export function AuthForm({
                         autoComplete="email"
                         placeholder="you@yourbusiness.com"
                         required
+                        readOnly={authConfigured && codeRequested}
                         value={email}
                         onChange={(event) => setEmail(event.target.value)}
                     />
-                    <label htmlFor="password">{t("Password")}</label>
-                    <div className="password-field">
-                        <input
-                            id="password"
-                            type={visible ? "text" : "password"}
-                            autoComplete={isSignup ? "new-password" : "current-password"}
-                            placeholder={t(isSignup && authConfigured ? "At least 12 characters" : "Password")}
-                            minLength={isSignup && authConfigured ? 12 : 1}
-                            required
-                            value={password}
-                            onChange={(event) => setPassword(event.target.value)}
-                        />
+                    {authConfigured && codeRequested && (
                         <button
+                            className="auth-code-change"
                             type="button"
-                            onClick={() => setVisible((current) => !current)}
-                            aria-label={t(visible ? "Hide password" : "Show password")}
+                            onClick={() => {
+                                setCodeRequested(false);
+                                setCode("");
+                                setResendCountdown(0);
+                                setError("");
+                                setNotice("");
+                            }}
                         >
-                            {visible ? <EyeOff size={16} /> : <Eye size={16} />}
+                            {t("Change email")}
                         </button>
-                    </div>
-                    {error && (
-                        <p className="auth-error" role="alert">
-                            {error}
-                        </p>
                     )}
-                    <button className="button button-blue auth-submit" type="submit" disabled={busy}>
-                        {t(isSignup ? "Create free account" : "Continue to your workspace")}{" "}
-                        <ArrowRight size={15} />
-                    </button>
-                </form>
+                    {authConfigured ? (
+                        codeRequested && (
+                            <>
+                                <label htmlFor="email-code">{t("6-digit email code")}</label>
+                                <input
+                                    id="email-code"
+                                    type="text"
+                                    inputMode="numeric"
+                                    autoComplete="one-time-code"
+                                    pattern="[0-9]{6}"
+                                    maxLength={6}
+                                    placeholder="123456"
+                                    required
+                                    value={code}
+                                    onChange={(event) =>
+                                        setCode(event.target.value.replace(/\D/g, "").slice(0, 6))
+                                    }
+                                />
+                            </>
+                        )
+                    ) : (
+                        <>
+                            <label htmlFor="password">{t("Password")}</label>
+                            <div className="password-field">
+                            <input
+                                id="password"
+                                type={visible ? "text" : "password"}
+                                autoComplete="current-password"
+                                placeholder={t("Password")}
+                                minLength={1}
+                                required
+                                value={password}
+                                onChange={(event) => setPassword(event.target.value)}
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setVisible((current) => !current)}
+                                    aria-label={t(visible ? "Hide password" : "Show password")}
+                                >
+                                    {visible ? <EyeOff size={16} /> : <Eye size={16} />}
+                                </button>
+                        </div>
+                    </>
+                )}
+                {error && (
+                    <p className="auth-error" role="alert">
+                            {error}
+                    </p>
+                )}
+                <button className="button button-blue auth-submit" type="submit" disabled={busy}>
+                    {t(
+                            authConfigured
+                                ? codeRequested
+                                    ? "Verify code and continue"
+                                    : "Send me a sign-in code"
+                                : isSignup
+                                  ? "Create free account"
+                                  : "Continue to your workspace",
+                    )}{" "}
+                    <ArrowRight size={15} />
+                </button>
+            </form>
                 {notice && <p className="auth-notice" role="status">{notice}</p>}
+                {authConfigured && codeRequested && (
+                    <button
+                        className="auth-code-resend"
+                        type="button"
+                        disabled={busy || resendCountdown > 0}
+                        onClick={requestCode}
+                    >
+                        {resendCountdown > 0
+                            ? t("Resend code in {seconds}s").replace(
+                                  "{seconds}",
+                                  String(resendCountdown),
+                              )
+                            : t("Resend code")}
+                    </button>
+                )}
                 <div className="auth-divider">
                     <span /> {t("or")} <span />
                 </div>
