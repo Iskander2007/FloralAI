@@ -11,6 +11,7 @@ FloralAI is a florist-focused assistant preview built with Next.js App Router, R
 | Signup and login | Supabase email/password and Google OAuth when configured; otherwise a clearly labelled browser-local demo |
 | Business profile and dashboard data | Browser-local preview data; not yet stored in a user-owned production database |
 | Dashboard, assistant test chat, knowledge editor and empty states | Working with browser-local demo data |
+| Product catalog | Photo, price and description management stored per Supabase account; product details feed the private assistant test chat |
 | `/api/chat` | Validated request shape; mock mode by default; optional server-side OpenAI-compatible provider |
 | Flower shop order assistant (`/flower-shop`) | Guided ordering in English, Russian and Kazakh; PostgreSQL persistence requires database setup |
 | Telegram florist bot (`/api/telegram/webhook`) | Webhook code ready; requires a BotFather token, public deployment and PostgreSQL; not connected yet |
@@ -19,6 +20,8 @@ FloralAI is a florist-focused assistant preview built with Next.js App Router, R
 | Supabase Auth, Google OAuth, card payments, WhatsApp, Instagram and Google Business | Require provider account setup and credentials; not configured by default |
 
 The app is a functional product preview, not a production-ready multi-tenant SaaS. Do not put real customer data in it. When Supabase is configured, dashboard navigation is protected by a verified server session, but business/profile data remains in this browser and the chat/order APIs are not tenant-isolated.
+
+Catalog product rows are protected by Supabase row-level security and scoped to the signed-in user. Product photos are stored in a public Supabase Storage bucket so they can later be shown to customers; do not upload private or sensitive images. The business profile and other dashboard data are still browser-local.
 
 The flower-shop page and Telegram handler use a deterministic guided conversation, not an LLM. Sample products and prices are illustrative; there is no live inventory, card payment, or owner order-management screen. Customers can choose cash on delivery or a bank transfer after the shop confirms the order. PostgreSQL is required to save confirmed orders. Telegram message delivery uses Telegram's Bot API (no per-message API charge), but the bot still needs a public host and a token from BotFather. The conversation does not collect or store card numbers.
 
@@ -77,6 +80,10 @@ Email one-time-code sign-in/registration and Google OAuth are handled by Supabas
 2. In Supabase **Authentication → URL Configuration**, set the Site URL to the app origin and allow these exact callback URLs: `http://localhost:3000/auth/callback` for local development and `https://YOUR_DEPLOYMENT_HOST/auth/callback` for production. Do not use a wildcard redirect.
 3. For Google sign-in, create OAuth credentials in Google Cloud Console, enable the Google provider in Supabase, and add the Supabase callback URL shown by its provider settings to the Google OAuth client's authorized redirect URIs. Add the app callback URLs above to Supabase's redirect allow list.
 4. In **Authentication → Email Templates → Magic Link**, use the `{{ .Token }}` template variable so Supabase sends a six-digit code (rather than only a sign-in link). Configure production SMTP and the email OTP expiry in Supabase before inviting real users. Supabase enforces its OTP request limits; FloralAI also applies a 60-second resend cooldown in the form. Google OAuth continues to use the `/auth/callback` route.
+
+### Product catalog setup
+
+Before using **Dashboard → Product catalog**, run `supabase/migrations/20261012190000_product_catalog.sql` once in the Supabase Dashboard's **SQL Editor**. It creates the catalog table, owner-only row-level security policies, a public `product-images` bucket with a 5 MB image limit, and owner-scoped upload/delete policies. The migration does not require a service-role key or `DATABASE_URL`. The table is account-scoped; only the product photos are public.
 
 The server checks Supabase users before serving the dashboard when auth is enabled; Next.js proxy refreshes the auth cookie. This is not sufficient production authorization for the rest of the product: API endpoints, order ownership, database records and tenant isolation still need server-side authorization before real business data is used.
 

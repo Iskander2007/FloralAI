@@ -13,6 +13,7 @@ import {
     ChevronDown,
     CircleHelp,
     CreditCard,
+    Flower2,
     Globe2,
     LayoutDashboard,
     LogOut,
@@ -28,7 +29,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, useState, useSyncExternalStore } from "react";
+import { FormEvent, useEffect, useState, useSyncExternalStore } from "react";
 import { useLanguage } from "@/components/language-provider";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import {
@@ -39,6 +40,8 @@ import {
     writeWorkspace,
 } from "@/lib/workspace";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import type { AssistantProduct } from "@/lib/catalog";
+import { ProductCatalog } from "@/components/product-catalog";
 import type { ChatTurn } from "@/lib/ai";
 import "../floral-theme.css";
 
@@ -48,6 +51,7 @@ type View =
     | "conversations"
     | "leads"
     | "knowledge"
+    | "catalog"
     | "analytics"
     | "integrations"
     | "settings"
@@ -72,6 +76,7 @@ const navigation: {
             group: "WORKSPACE",
         },
         { id: "leads", label: "Leads", icon: Users, group: "WORKSPACE" },
+        { id: "catalog", label: "Product catalog", icon: Flower2, group: "BUILD" },
         {
             id: "knowledge",
             label: "Business knowledge",
@@ -114,6 +119,31 @@ function TestChat({ workspace }: { workspace: DemoWorkspace }) {
     const [input, setInput] = useState("");
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState(false);
+    const [catalogError, setCatalogError] = useState("");
+    const [products, setProducts] = useState<AssistantProduct[]>([]);
+
+    useEffect(() => {
+        let cancelled = false;
+        async function loadProducts() {
+            const client = createSupabaseBrowserClient();
+            if (!client) return;
+            const { data, error: catalogError } = await client
+                .from("catalog_products")
+                .select("name, price_kzt, description")
+                .order("created_at", { ascending: false })
+                .limit(30);
+            if (catalogError) {
+                console.error("Unable to load products for the assistant test.", catalogError);
+                if (!cancelled) setCatalogError(catalogError.message);
+                return;
+            }
+            if (!cancelled) setProducts((data ?? []) as AssistantProduct[]);
+        }
+        void loadProducts();
+        return () => {
+            cancelled = true;
+        };
+    }, []);
 
     async function send(event?: FormEvent, suggestion?: string) {
         event?.preventDefault();
@@ -136,6 +166,7 @@ function TestChat({ workspace }: { workspace: DemoWorkspace }) {
                         services: business.services,
                         tone: business.tone,
                         language: business.language,
+                        products,
                     },
                 }),
             });
@@ -167,6 +198,11 @@ function TestChat({ workspace }: { workspace: DemoWorkspace }) {
                 <span className="test-label">{t("TEST MODE")}</span>
             </div>
             <div className="test-chat-messages">
+                {catalogError && (
+                    <div className="test-error" role="alert">
+                        {t("Could not load catalog products.")} {catalogError}
+                    </div>
+                )}
                 <div className="test-message assistant-message">
                     {t("Hi, I’m your friendly assistant")} for{" "}
                     {business?.name || t("your business")}.{" "}
@@ -953,6 +989,7 @@ export default function DashboardPage() {
                                                     t("No description added yet. Add your services, opening hours, policies and prices so your assistant can give useful answers.")}
                                             </p>
                                         )}
+
                                         <div className="knowledge-meta">
                                             <span>
                                                 <BadgeCheck size={14} /> {t("Uses approved business information only")}
@@ -981,6 +1018,8 @@ export default function DashboardPage() {
                                     </div>
                                 </>
                             )}
+
+                            {view === "catalog" && <ProductCatalog />}
 
                             {view === "analytics" && (
                                 <>

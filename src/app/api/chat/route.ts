@@ -1,7 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
-import { AssistantContext, ChatTurn, generateAIResponse } from "@/lib/ai";
+import { generateAIResponse } from "@/lib/ai";
+import type { AssistantContext, ChatTurn } from "@/lib/ai";
+import type { AssistantProduct } from "@/lib/catalog";
 
 export const runtime = "nodejs";
+
+function isAssistantProduct(value: unknown): value is AssistantProduct {
+    if (!value || typeof value !== "object") return false;
+    const product = value as Record<string, unknown>;
+    return (
+        typeof product.name === "string" &&
+        product.name.trim().length > 0 &&
+        product.name.length <= 120 &&
+        typeof product.price_kzt === "number" &&
+        Number.isSafeInteger(product.price_kzt) &&
+        product.price_kzt >= 0 &&
+        typeof product.description === "string" &&
+        product.description.length <= 1000
+    );
+}
 
 export async function POST(request: NextRequest) {
     let payload: unknown;
@@ -35,9 +52,31 @@ export async function POST(request: NextRequest) {
         context.businessDescription.length > 4000 ||
         !Array.isArray(context.services) ||
         context.services.length > 30 ||
-        !context.services.every((service) => typeof service === "string" && service.length <= 180)
+        !context.services.every(
+            (service) => typeof service === "string" && service.length <= 180,
+        ) ||
+        (context.tone !== undefined &&
+            (typeof context.tone !== "string" || context.tone.length > 50)) ||
+        (context.language !== undefined &&
+            (typeof context.language !== "string" || context.language.length > 50))
     ) {
         return NextResponse.json({ error: "Business context is invalid." }, { status: 400 });
+    }
+
+    const rawProducts = context.products;
+    let products: AssistantProduct[] = [];
+    if (rawProducts !== undefined) {
+        if (
+            !Array.isArray(rawProducts) ||
+            rawProducts.length > 30 ||
+            !rawProducts.every(isAssistantProduct)
+        ) {
+            return NextResponse.json(
+                { error: "Product catalog is invalid." },
+                { status: 400 },
+            );
+        }
+        products = rawProducts.filter(isAssistantProduct);
     }
 
     const history = Array.isArray(body.history)
@@ -56,7 +95,19 @@ export async function POST(request: NextRequest) {
         : [];
 
     try {
-        const reply = await generateAIResponse(message, context as AssistantContext, history);
+        const assistantContext: AssistantContext = {
+            businessName: context.businessName,
+            businessDescription: context.businessDescription,
+            services: context.services,
+            products,
+            ...(typeof context.tone === "string" ? { tone: context.tone } : {}),
+            ...(typeof context.language === "string" ? { language: context.language } : {}),
+        };
+        const reply = await generateAIResponse(
+            message,
+            assistantContext,
+            history,
+        );
         return NextResponse.json({ reply, mode: process.env.USE_MOCK_AI === "false" ? "provider" : "mock" });
     } catch {
         return NextResponse.json(

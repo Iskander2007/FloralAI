@@ -1,9 +1,12 @@
+import type { AssistantProduct } from "@/lib/catalog";
+
 export type ChatTurn = { role: "user" | "assistant"; content: string };
 
 export type AssistantContext = {
     businessName: string;
     businessDescription: string;
     services: string[];
+    products?: AssistantProduct[];
     tone?: string;
     language?: string;
 };
@@ -19,7 +22,19 @@ export async function generateAIResponse(
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) throw new Error("AI provider is not configured");
 
-    const businessDetails = [context.businessDescription, ...context.services].filter(Boolean).join("\n");
+    const products = context.products ?? [];
+    const productDetails = products.length
+        ? `\n\nProduct catalog:\n${products
+              .map(
+                  (product) =>
+                      `- ${product.name}: ${product.price_kzt} KZT${product.description ? ` — ${product.description}` : ""}`,
+              )
+              .join("\n")}`
+        : "";
+    const businessDetails = [
+        context.businessDescription,
+        ...context.services,
+    ].filter(Boolean).join("\n") + productDetails;
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
         headers: {
@@ -53,10 +68,19 @@ export async function generateAIResponse(
 function mockResponse(message: string, context: AssistantContext) {
     const text = message.toLowerCase();
     const knowledge = context.services.join("; ");
+    const products = context.products ?? [];
     if (/human|person|agent|человек|оператор|сотрудник/i.test(text)) {
         return "Of course. I can pass your message to a teammate. This demo does not send a real notification.";
     }
     if (/price|cost|how much|стоим|цен/i.test(text)) {
+        if (products.length) {
+            return `Here are the products in ${context.businessName}'s catalog: ${products
+                .map(
+                    (product) =>
+                        `${product.name} — ${new Intl.NumberFormat("ru-RU").format(product.price_kzt)} ₸${product.description ? ` (${product.description})` : ""}`,
+                )
+                .join("; ")}. Would you like help choosing one?`;
+        }
         return knowledge
             ? `Here is what I have for ${context.businessName}: ${knowledge}. Would you like help with anything else?`
             : `I don't have approved pricing information for ${context.businessName} yet, and I don't want to guess. Would you like me to pass this to a teammate?`;
