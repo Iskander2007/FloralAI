@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Copy, ExternalLink, Send } from "lucide-react";
 import { useLanguage } from "@/components/language-provider";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { translateError } from "@/lib/i18n";
 
 type TelegramBusiness = {
     id: string;
@@ -14,7 +15,7 @@ type TelegramBusiness = {
 };
 
 export function TelegramChannel({ businessName }: { businessName: string }) {
-    const { t } = useLanguage();
+    const { locale, t } = useLanguage();
     const [setup, setSetup] = useState<TelegramBusiness | null>(null);
     const [botUsername, setBotUsername] = useState("");
     const [loading, setLoading] = useState(true);
@@ -56,14 +57,12 @@ export function TelegramChannel({ businessName }: { businessName: string }) {
                 if (configResponse.ok && config.username && !cancelled) {
                     setBotUsername(config.username);
                 } else if (!configResponse.ok && !cancelled) {
-                    setError(config.error ?? t("Telegram bot is not configured on the server yet."));
+                    setError(translateError(locale, config.error, "Telegram bot is not configured on the server yet."));
                 }
             } catch (loadError) {
                 if (!cancelled) {
                     setError(
-                        loadError instanceof Error
-                            ? loadError.message
-                            : t("Could not load Telegram settings."),
+                        translateError(locale, loadError, "Could not load Telegram settings."),
                     );
                 }
             } finally {
@@ -74,7 +73,7 @@ export function TelegramChannel({ businessName }: { businessName: string }) {
         return () => {
             cancelled = true;
         };
-    }, [t]);
+    }, [locale, t]);
 
     async function connect() {
         setError("");
@@ -130,9 +129,7 @@ export function TelegramChannel({ businessName }: { businessName: string }) {
             setNotice(t("Telegram bot connected. Share its link with your customers."));
         } catch (connectError) {
             setError(
-                connectError instanceof Error
-                    ? connectError.message
-                    : t("Could not connect Telegram."),
+                translateError(locale, connectError, "Could not connect Telegram."),
             );
         } finally {
             setSaving(false);
@@ -162,9 +159,7 @@ export function TelegramChannel({ businessName }: { businessName: string }) {
             setNotice(t("Telegram bot paused."));
         } catch (disconnectError) {
             setError(
-                disconnectError instanceof Error
-                    ? disconnectError.message
-                    : t("Could not pause Telegram."),
+                translateError(locale, disconnectError, "Could not pause Telegram."),
             );
         } finally {
             setSaving(false);
@@ -180,9 +175,7 @@ export function TelegramChannel({ businessName }: { businessName: string }) {
             setNotice(t("Telegram link copied."));
         } catch (copyError) {
             setError(
-                copyError instanceof Error
-                    ? copyError.message
-                    : t("Could not copy the Telegram link."),
+                translateError(locale, copyError, "Could not copy the Telegram link."),
             );
         }
     }

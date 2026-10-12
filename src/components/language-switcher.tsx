@@ -1,7 +1,7 @@
 "use client";
 
 import { Globe2 } from "lucide-react";
-import { localeNames, supportedLocales } from "@/lib/i18n";
+import { supportedLocales } from "@/lib/i18n";
 import { useLanguage } from "@/components/language-provider";
 
 export function LanguageSwitcher() {
@@ -18,7 +18,7 @@ export function LanguageSwitcher() {
             >
                 {supportedLocales.map((option) => (
                     <option key={option} value={option}>
-                        {localeNames[option]}
+                        {t(option === "en" ? "English" : option === "ru" ? "Russian" : "Kazakh")}
                     </option>
                 ))}
             </select>

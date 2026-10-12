@@ -7,6 +7,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { useLanguage } from "@/components/language-provider";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { translateError } from "@/lib/i18n";
 import { readWorkspace, writeWorkspace } from "@/lib/workspace";
 import "../app/floral-theme.css";
 
@@ -18,7 +19,7 @@ export function AuthForm({
     callbackError?: "auth_not_configured" | "auth_callback_failed";
 }) {
     const router = useRouter();
-    const { t } = useLanguage();
+    const { locale, t } = useLanguage();
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [code, setCode] = useState("");
@@ -61,9 +62,7 @@ export function AuthForm({
             setNotice(t("We sent a 6-digit sign-in code to your email."));
         } catch (authError) {
             setError(
-                authError instanceof Error
-                    ? authError.message
-                    : t("Authentication failed. Please try again."),
+                translateError(locale, authError, "Authentication failed. Please try again."),
             );
         } finally {
             setBusy(false);
@@ -114,9 +113,7 @@ export function AuthForm({
                 );
             } catch (authError) {
                 setError(
-                    authError instanceof Error
-                        ? authError.message
-                        : t("Authentication failed. Please try again."),
+                    translateError(locale, authError, "Authentication failed. Please try again."),
                 );
             } finally {
                 setBusy(false);
@@ -131,7 +128,7 @@ export function AuthForm({
             existing.email.toLowerCase() !== email.toLowerCase()
         ) {
             setError(
-                "This local demo only recognises the email used on this browser.",
+                t("This local demo only recognises the email used on this browser."),
             );
             return;
         }
@@ -166,9 +163,7 @@ export function AuthForm({
             if (oauthError) throw oauthError;
         } catch (oauthError) {
             setError(
-                oauthError instanceof Error
-                    ? oauthError.message
-                    : t("Google sign-in failed. Please try again."),
+                translateError(locale, oauthError, "Google sign-in failed. Please try again."),
             );
         } finally {
             setBusy(false);

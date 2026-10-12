@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import type { ReactNode } from "react";
 import { LanguageProvider } from "@/components/language-provider";
+import { defaultLocale, translate } from "@/lib/i18n";
 import "./globals.css";
 import "./product.css";
 
@@ -15,29 +16,29 @@ export const metadata: Metadata = {
     process.env.NEXT_PUBLIC_APP_URL ??
       "https://floral-ai-git-main-iskander11.vercel.app",
   ),
-  title: "FloralAI | Thoughtful conversations, beautifully handled",
+  title: translate(defaultLocale, "FloralAI | Thoughtful conversations, beautifully handled"),
   description:
-    "A thoughtful AI teammate for flower shops and small businesses. Welcome customers, guide orders and never miss a conversation.",
+    "Умный помощник для цветочных магазинов и малого бизнеса. Отвечайте клиентам, принимайте заявки и помогайте с заказами круглосуточно.",
   openGraph: {
-    title: "FloralAI | A thoughtful AI teammate for your business",
+    title: "FloralAI | Умный помощник для вашего бизнеса",
     description:
-      "Welcome every customer, guide flower orders and keep conversations moving.",
+      "Помогайте каждому клиенту, подбирайте букеты и принимайте заказы.",
     siteName: "FloralAI",
-    locale: "en_US",
+    locale: "ru_RU",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "FloralAI | A thoughtful AI teammate for your business",
+    title: "FloralAI | Умный помощник для вашего бизнеса",
     description:
-      "Answer questions, capture leads and book appointments around the clock.",
+      "Отвечайте на вопросы, принимайте заявки и записывайте клиентов круглосуточно.",
   },
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html
-      lang="en"
+      lang={defaultLocale}
       data-scroll-behavior="smooth"
       className={`${geistSans.variable} h-full antialiased`}
     >

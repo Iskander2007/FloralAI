@@ -207,7 +207,7 @@ function ChatDemo({
     const profile = businesses[business];
     const visibleMessages = useMemo(() => messages.slice(-5), [messages]);
 
-    function sendMessage(value: string) {
+    function sendMessage(value: string, intent = value) {
         const clean = value.trim();
         if (!clean || typing) return;
         setInput("");
@@ -219,7 +219,7 @@ function ChatDemo({
         window.setTimeout(() => {
             setMessages((current) => [
                 ...current,
-                { role: "assistant", content: replyFor(business, clean) },
+                { role: "assistant", content: replyFor(business, intent) },
             ]);
             setTyping(false);
         }, 650);
@@ -234,16 +234,16 @@ function ChatDemo({
         <div className="chat-window">
             <div className="chat-topbar">
                 <div className="chat-identity">
-                    <span className="chat-avatar">{profile.mark}</span>
+                    <span className="chat-avatar">{t(profile.name).slice(0, 1)}</span>
                     <div>
-                        <strong>{profile.name}</strong>
+                        <strong>{t(profile.name)}</strong>
                         <span>
                             <i className="online-dot" /> {t("Typically replies instantly")}
                         </span>
                     </div>
                 </div>
                 <span className="chat-powered">
-                    <Sparkles size={13} /> AI
+                    <Sparkles size={13} /> {t("AI")}
                 </span>
             </div>
             <div
@@ -274,7 +274,7 @@ function ChatDemo({
             >
                 <div className="chat-date">{t("TODAY, 10:42 AM")}</div>
                 <div className="message-row">
-                    <span className="mini-avatar">{profile.mark}</span>
+                    <span className="mini-avatar">{t(profile.name).slice(0, 1)}</span>
                     <div className="message-bubble assistant-bubble">
                         {t(profile.welcome)}
                         <span className="message-time">10:42</span>
@@ -286,7 +286,7 @@ function ChatDemo({
                         className={`message-row ${message.role === "customer" ? "customer-row" : ""}`}
                     >
                         {message.role === "assistant" && (
-                            <span className="mini-avatar">{profile.mark}</span>
+                            <span className="mini-avatar">{t(profile.name).slice(0, 1)}</span>
                         )}
                         <div
                             className={`message-bubble ${message.role === "assistant" ? "assistant-bubble" : "customer-bubble"}`}
@@ -300,7 +300,7 @@ function ChatDemo({
                 ))}
                 {typing && (
                     <div className="message-row" role="status" aria-label={t("Assistant is typing")}>
-                        <span className="mini-avatar">{profile.mark}</span>
+                        <span className="mini-avatar">{t(profile.name).slice(0, 1)}</span>
                         <div className="message-bubble assistant-bubble typing-bubble" aria-hidden="true">
                             <i />
                             <i />
@@ -314,7 +314,7 @@ function ChatDemo({
                             <button
                                 key={prompt}
                                 type="button"
-                                onClick={() => sendMessage(prompt)}
+                                onClick={() => sendMessage(t(prompt), prompt)}
                             >
                                 {t(prompt)}
                                 <ArrowUpRight size={12} />
@@ -512,9 +512,9 @@ export default function Home() {
                         </div>
                         <div className="hero-proof">
                             <div className="proof-avatars">
-                                <span>J</span>
-                                <span>A</span>
-                                <span>M</span>
+                                <span>Ю</span>
+                                <span>А</span>
+                                <span>М</span>
                                 <span>+</span>
                             </div>
                             <p>
@@ -558,14 +558,14 @@ export default function Home() {
                     <span>{t("BUILT FOR YOUR KIND OF BUSINESS")}</span>
                     <div className="business-logos">
                         <span>
-                            mira<span className="logo-light">studio</span>
+                            {t("Mira Studio")}
                         </span>
-                        <span className="logo-serif">Sunday Table</span>
-                        <span className="logo-wide">NORTHLINE</span>
+                        <span className="logo-serif">{t("Sunday Table")}</span>
+                        <span className="logo-wide">{t("Northline Dental")}</span>
                         <span>
-                            object<span className="logo-light">supply</span>
+                            {t("Object Supply")}
                         </span>
-                        <span className="logo-mono">MORROW AUTO</span>
+                        <span className="logo-mono">{t("Morrow Auto")}</span>
                     </div>
                 </div>
             </section>
@@ -713,7 +713,7 @@ export default function Home() {
                                 <span className="doc-icon">
                                     <MessageSquareText size={15} />
                                 </span>{" "}
-                                MIRA STUDIO{" "}
+                                {t("Mira Studio")}{" "}
                                 <span className="doc-status">
                                     <Check size={11} /> {t("READY")}
                                 </span>

@@ -114,7 +114,7 @@ function getServerDashboardView(): View {
 }
 
 function TestChat({ workspace }: { workspace: DemoWorkspace }) {
-    const { t } = useLanguage();
+    const { locale, t } = useLanguage();
     const business = workspace.business;
     const [history, setHistory] = useState<ChatTurn[]>([]);
     const [input, setInput] = useState("");
@@ -135,7 +135,7 @@ function TestChat({ workspace }: { workspace: DemoWorkspace }) {
                 .limit(30);
             if (catalogError) {
                 console.error("Unable to load products for the assistant test.", catalogError);
-                if (!cancelled) setCatalogError(catalogError.message);
+                if (!cancelled) setCatalogError("Could not load catalog products.");
                 return;
             }
             if (!cancelled) setProducts((data ?? []) as AssistantProduct[]);
@@ -166,7 +166,7 @@ function TestChat({ workspace }: { workspace: DemoWorkspace }) {
                         businessDescription: business.description,
                         services: business.services,
                         tone: business.tone,
-                        language: business.language,
+                        language: locale === "ru" ? "Russian" : locale === "kk" ? "Kazakh" : "English",
                         products,
                     },
                 }),
@@ -201,7 +201,7 @@ function TestChat({ workspace }: { workspace: DemoWorkspace }) {
             <div className="test-chat-messages">
                 {catalogError && (
                     <div className="test-error" role="alert">
-                        {t("Could not load catalog products.")} {catalogError}
+                        {t(catalogError)}
                     </div>
                 )}
                 <div className="test-message assistant-message">
@@ -355,7 +355,7 @@ export default function DashboardPage() {
         if (supabase) {
             const { error } = await supabase.auth.signOut();
             if (error) {
-                setNotice(`Could not sign out: ${error.message}`);
+                setNotice("Could not sign out. Please try again.");
                 return;
             }
         }
@@ -378,7 +378,7 @@ export default function DashboardPage() {
     if (authError)
         return (
             <main className="dashboard-loading">
-                <p role="alert">{t("Unable to verify your account session.")} {authError}</p>
+                <p role="alert">{t("Unable to verify your account session.")}</p>
             </main>
         );
     if (!workspace)
@@ -554,7 +554,7 @@ export default function DashboardPage() {
                         <>
                             {notice && (
                                 <div className="dashboard-toast">
-                                    <Check size={14} /> {notice}
+                                    <Check size={14} /> {t(notice)}
                                 </div>
                             )}
                             {view === "overview" && (
@@ -764,7 +764,7 @@ export default function DashboardPage() {
                                             <input
                                                 className="dashboard-input"
                                                 id="assistant-name"
-                                                defaultValue={`${business.name} assistant`}
+                                                defaultValue={`${business.name} ${t("assistant")}`}
                                             />
                                             <label className="field-label" htmlFor="assistant-tone">
                                                 {t("Tone of voice")}
@@ -774,10 +774,10 @@ export default function DashboardPage() {
                                                 id="assistant-tone"
                                                 defaultValue={business.tone}
                                             >
-                                                <option>{t("Friendly")}</option>
-                                                <option>{t("Professional")}</option>
-                                                <option>{t("Premium")}</option>
-                                                <option>{t("Casual")}</option>
+                                                <option value="Friendly">{t("Friendly")}</option>
+                                                <option value="Professional">{t("Professional")}</option>
+                                                <option value="Premium">{t("Premium")}</option>
+                                                <option value="Casual">{t("Casual")}</option>
                                             </select>
                                             <label
                                                 className="field-label"
@@ -790,9 +790,9 @@ export default function DashboardPage() {
                                                 id="assistant-language"
                                                 defaultValue={business.language}
                                             >
-                                                <option>{t("English")}</option>
-                                                <option>{t("Russian")}</option>
-                                                <option>{t("Kazakh")}</option>
+                                                <option value="English">{t("English")}</option>
+                                                <option value="Russian">{t("Russian")}</option>
+                                                <option value="Kazakh">{t("Kazakh")}</option>
                                             </select>
                                             <div className="guardrail-note">
                                                 <BadgeCheck size={15} />

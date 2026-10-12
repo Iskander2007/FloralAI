@@ -47,7 +47,7 @@ export async function generateAIResponse(
             messages: [
                 {
                     role: "system",
-                    content: `You are the concise ${context.tone ?? "friendly"} assistant for ${context.businessName}. Reply in ${context.language ?? "English"}. Use only the approved business information below. Never invent prices, stock, schedules, policies, or availability. If the information is missing, say so and offer a human handoff.\n\nApproved business information:\n${businessDetails || "No approved business information supplied."}`,
+                    content: `You are the concise ${context.tone ?? "friendly"} assistant for ${context.businessName}. Reply in ${context.language ?? "Russian"}. Use only the approved business information below. Never invent prices, stock, schedules, policies, or availability. If the information is missing, say so and offer a human handoff.\n\nApproved business information:\n${businessDetails || "No approved business information supplied."}`,
                 },
                 ...history.slice(-12),
                 { role: "user", content: message },
@@ -69,29 +69,65 @@ function mockResponse(message: string, context: AssistantContext) {
     const text = message.toLowerCase();
     const knowledge = context.services.join("; ");
     const products = context.products ?? [];
-    if (/human|person|agent|человек|оператор|сотрудник/i.test(text)) {
-        return "Of course. I can pass your message to a teammate. This demo does not send a real notification.";
+    const language = context.language?.toLowerCase() ?? "russian";
+    const locale = /^(kk|kazakh|қазақ)/.test(language) ? "kk" : /^(en|english|англий)/.test(language) ? "en" : "ru";
+    const copy = (ru: string, en: string, kk: string) => ({ ru, en, kk })[locale];
+    if (/human|person|agent|человек|оператор|сотрудник|адам|қызметкер/i.test(text)) {
+        return copy(
+            "Конечно. Я могу передать ваше сообщение сотруднику. В этом демо настоящее уведомление не отправляется.",
+            "Of course. I can pass your message to a teammate. This demo does not send a real notification.",
+            "Әрине. Хабарламаңызды қызметкерге бере аламын. Бұл демода нақты хабарландыру жіберілмейді.",
+        );
     }
-    if (/price|cost|how much|стоим|цен/i.test(text)) {
+    if (/price|cost|how much|стоим|цен|сколько|баға|қанша/i.test(text)) {
         if (products.length) {
-            return `Here are the products in ${context.businessName}'s catalog: ${products
+            const catalog = products
                 .map(
                     (product) =>
-                        `${product.name} — ${new Intl.NumberFormat("ru-RU").format(product.price_kzt)} ₸${product.description ? ` (${product.description})` : ""}`,
+                        `${product.name} — ${new Intl.NumberFormat(locale).format(product.price_kzt)} ₸${product.description ? ` (${product.description})` : ""}`,
                 )
-                .join("; ")}. Would you like help choosing one?`;
+                .join("; ");
+            return copy(
+                `Товары в каталоге «${context.businessName}»: ${catalog}. Помочь с выбором?`,
+                `Here are the products in ${context.businessName}'s catalog: ${catalog}. Would you like help choosing one?`,
+                `«${context.businessName}» каталогындағы өнімдер: ${catalog}. Таңдауға көмектесейін бе?`,
+            );
         }
         return knowledge
-            ? `Here is what I have for ${context.businessName}: ${knowledge}. Would you like help with anything else?`
-            : `I don't have approved pricing information for ${context.businessName} yet, and I don't want to guess. Would you like me to pass this to a teammate?`;
+            ? copy(
+                `Вот информация о «${context.businessName}»: ${knowledge}. Чем ещё помочь?`,
+                `Here is what I have for ${context.businessName}: ${knowledge}. Would you like help with anything else?`,
+                `«${context.businessName}» туралы ақпарат: ${knowledge}. Тағы немен көмектесейін?`,
+            )
+            : copy(
+                `У меня пока нет подтверждённых цен для «${context.businessName}». Передать ваш вопрос сотруднику?`,
+                `I don't have approved pricing information for ${context.businessName} yet, and I don't want to guess. Would you like me to pass this to a teammate?`,
+                `«${context.businessName}» бағалары әзірге расталмаған. Сұрағыңызды қызметкерге берейін бе?`,
+            );
     }
-    if (/hour|open|when|schedule|врем|откры/i.test(text)) {
+    if (/hour|open|when|schedule|врем|откры|график|сағат|ашық/i.test(text)) {
         return context.businessDescription
-            ? `I can check the details you shared: ${context.businessDescription.slice(0, 180)}. If you'd like, I can pass your question to the team.`
-            : `I don't have the opening hours for ${context.businessName} yet. Would you like me to pass this to a teammate?`;
+            ? copy(
+                `Вот информация, которую вы добавили: ${context.businessDescription.slice(0, 180)}. При необходимости передам ваш вопрос команде.`,
+                `I can check the details you shared: ${context.businessDescription.slice(0, 180)}. If you'd like, I can pass your question to the team.`,
+                `Сіз қосқан ақпарат: ${context.businessDescription.slice(0, 180)}. Қажет болса, сұрағыңызды қызметкерге беремін.`,
+            )
+            : copy(
+                `У меня пока нет графика работы «${context.businessName}». Передать ваш вопрос сотруднику?`,
+                `I don't have the opening hours for ${context.businessName} yet. Would you like me to pass this to a teammate?`,
+                `«${context.businessName}» жұмыс уақыты әзірге белгісіз. Сұрағыңызды қызметкерге берейін бе?`,
+            );
     }
-    if (/book|appointment|reserve|запис/i.test(text)) {
-        return "I can help collect your preferred day and time. A teammate will need to confirm the booking in this demo.";
+    if (/book|appointment|reserve|запис|брон|жазыл/i.test(text)) {
+        return copy(
+            "Помогу выбрать удобный день и время. В этом демо запись должен подтвердить сотрудник.",
+            "I can help collect your preferred day and time. A teammate will need to confirm the booking in this demo.",
+            "Қолайлы күн мен уақытты таңдауға көмектесемін. Бұл демода жазылуды қызметкер растауы керек.",
+        );
     }
-    return `Thanks for reaching out to ${context.businessName}. I can help with services, pricing or appointments. What would you like to know?`;
+    return copy(
+        `Спасибо, что обратились в «${context.businessName}». Помогу с услугами, ценами и записью. Что вы хотите узнать?`,
+        `Thanks for reaching out to ${context.businessName}. I can help with services, pricing or appointments. What would you like to know?`,
+        `«${context.businessName}» компаниясына хабарласқаныңызға рақмет. Қызметтер, бағалар және жазылу бойынша көмектесемін. Не білгіңіз келеді?`,
+    );
 }

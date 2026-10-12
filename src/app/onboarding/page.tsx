@@ -39,7 +39,7 @@ const emptyBusiness: BusinessProfile = {
     location: "",
     hours: "",
     phone: "",
-    language: "English",
+    language: "Russian",
     tone: "Friendly",
     services: [],
 };
@@ -101,7 +101,7 @@ export default function OnboardingPage() {
     if (authError)
         return (
             <main className="onboarding-loading">
-                <p role="alert">{t("Unable to verify your account session.")} {authError}</p>
+                <p role="alert">{t("Unable to verify your account session.")}</p>
             </main>
         );
 
@@ -485,8 +485,8 @@ export default function OnboardingPage() {
                                         {business.name.slice(0, 1) || "B"}
                                     </span>
                                     <div>
-                                        <b>{business.name || "Your business"}</b>
-                                        <small>{business.category}</small>
+                                        <b>{business.name || t("Your business")}</b>
+                                        <small>{t(business.category)}</small>
                                     </div>
                                     <span className="draft-pill">{t("DRAFT")}</span>
                                 </div>
@@ -494,12 +494,12 @@ export default function OnboardingPage() {
                                 <div className="review-row">
                                     <span>{t("Personality")}</span>
                                     <b>
-                                        {business.tone} · {business.language}
+                                        {t(business.tone)} · {t(business.language)}
                                     </b>
                                 </div>
                                 <div className="review-row">
                                     <span>{t("Business info")}</span>
-                                    <b>{business.description ? "Added" : "Add later"}</b>
+                                    <b>{t(business.description ? "Added" : "Add later")}</b>
                                 </div>
                                 <div className="review-row">
                                     <span>{t("Website widget")}</span>

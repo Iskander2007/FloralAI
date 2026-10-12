@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { AuthForm } from "@/components/auth-form";
+import { defaultLocale, translate } from "@/lib/i18n";
 
-export const metadata: Metadata = { title: "Log in to FloralAI" };
+export const metadata: Metadata = { title: translate(defaultLocale, "Log in to FloralAI") };
 
 export default async function LoginPage({
     searchParams,

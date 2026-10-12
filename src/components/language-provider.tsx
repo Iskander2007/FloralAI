@@ -2,7 +2,7 @@
 
 import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useSyncExternalStore } from "react";
 import { usePathname } from "next/navigation";
-import { isLocale, Locale, translate } from "@/lib/i18n";
+import { defaultLocale, isLocale, Locale, translate } from "@/lib/i18n";
 
 type LanguageContextValue = {
     locale: Locale;
@@ -11,15 +11,8 @@ type LanguageContextValue = {
 };
 
 const LanguageContext = createContext<LanguageContextValue | null>(null);
-const localeStorageKey = "floralai:locale";
+const localeStorageKey = "floralai:locale:v2";
 const localeChangeEvent = "floralai:localechange";
-
-function getBrowserLocale(): Locale {
-    const language = navigator.language.toLowerCase();
-    if (language.startsWith("ru")) return "ru";
-    if (language.startsWith("kk")) return "kk";
-    return "en";
-}
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
     const pathname = usePathname();
@@ -33,9 +26,9 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     }, []);
     const getLocaleSnapshot = useCallback(() => {
         const stored = window.localStorage.getItem(localeStorageKey);
-        return isLocale(stored) ? stored : getBrowserLocale();
+        return isLocale(stored) ? stored : defaultLocale;
     }, []);
-    const getServerLocaleSnapshot = useCallback((): Locale => "en", []);
+    const getServerLocaleSnapshot = useCallback((): Locale => defaultLocale, []);
     const locale = useSyncExternalStore(
         subscribe,
         getLocaleSnapshot,

@@ -5,6 +5,7 @@ import { ImagePlus, Pencil, Plus, Trash2, X } from "lucide-react";
 import { useLanguage } from "@/components/language-provider";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import type { CatalogProduct } from "@/lib/catalog";
+import { translateError } from "@/lib/i18n";
 
 const bucket = "product-images";
 const maximumImageSize = 5 * 1024 * 1024;
@@ -36,7 +37,7 @@ function imageUrl(path: string | null) {
 }
 
 export function ProductCatalog() {
-    const { t } = useLanguage();
+    const { locale, t } = useLanguage();
     const [products, setProducts] = useState<CatalogProduct[]>([]);
     const [draft, setDraft] = useState<ProductDraft>(emptyDraft);
     const [editing, setEditing] = useState<CatalogProduct | null>(null);
@@ -72,9 +73,7 @@ export function ProductCatalog() {
             } catch (loadError) {
                 if (!cancelled) {
                     setError(
-                        loadError instanceof Error
-                            ? loadError.message
-                            : t("Could not load your product catalog."),
+                        translateError(locale, loadError, "Could not load your product catalog."),
                     );
                 }
             } finally {
@@ -85,7 +84,7 @@ export function ProductCatalog() {
         return () => {
             cancelled = true;
         };
-    }, [t]);
+    }, [locale, t]);
 
     function resetForm() {
         setDraft(emptyDraft);
@@ -206,7 +205,7 @@ export function ProductCatalog() {
                     .remove([oldImagePath]);
                 if (removeError) {
                     setError(
-                        `${t("Product saved, but its previous image could not be removed.")} ${removeError.message}`,
+                        t("Product saved, but its previous image could not be removed."),
                     );
                 }
             }
@@ -220,9 +219,7 @@ export function ProductCatalog() {
                 }
             }
             setError(
-                saveError instanceof Error
-                    ? saveError.message
-                    : t("Could not save the product."),
+                translateError(locale, saveError, "Could not save the product."),
             );
         } finally {
             setSaving(false);
@@ -262,15 +259,13 @@ export function ProductCatalog() {
                     .remove([product.image_path]);
                 if (removeError) {
                     setError(
-                        `${t("Product deleted, but its image could not be removed.")} ${removeError.message}`,
+                        t("Product deleted, but its image could not be removed."),
                     );
                 }
             }
         } catch (deleteError) {
             setError(
-                deleteError instanceof Error
-                    ? deleteError.message
-                    : t("Could not delete the product."),
+                translateError(locale, deleteError, "Could not delete the product."),
             );
         } finally {
             setSaving(false);
