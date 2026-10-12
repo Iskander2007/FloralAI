@@ -42,6 +42,7 @@ import {
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import type { AssistantProduct } from "@/lib/catalog";
 import { ProductCatalog } from "@/components/product-catalog";
+import { TelegramChannel } from "@/components/telegram-channel";
 import type { ChatTurn } from "@/lib/ai";
 import "../floral-theme.css";
 
@@ -1098,12 +1099,6 @@ export default function DashboardPage() {
                                                 state: "COMING SOON",
                                             },
                                             {
-                                                name: "Telegram",
-                                                detail: t("Add your Telegram business bot"),
-                                                icon: Send,
-                                                state: "COMING SOON",
-                                            },
-                                            {
                                                 name: "Facebook",
                                                 detail: t("Respond to messages from your page"),
                                                 icon: MessageCircle,
@@ -1144,8 +1139,11 @@ export default function DashboardPage() {
                                             </article>
                                         ))}
                                     </div>
+                                    <TelegramChannel
+                                        businessName={business?.name ?? ""}
+                                    />
                                     <div className="integration-disclosure">
-                                        <Sparkles size={15} /> {t("External channels are not connected in this preview. No messages will be sent to customers.")}
+                                        <Sparkles size={15} /> {t("Telegram is the free shared channel. WhatsApp and other channels need separate provider setup.")}
                                     </div>
                                 </>
                             )}

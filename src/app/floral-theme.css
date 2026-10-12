@@ -2688,6 +2688,86 @@
         grid-template-columns: minmax(0, 1fr);
     }
 
+    .telegram-channel {
+        display: grid;
+        gap: 16px;
+        padding: 20px;
+    }
+
+    .telegram-channel-heading {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+    }
+
+    .telegram-channel-heading > div {
+        flex: 1;
+    }
+
+    .telegram-channel-heading h2,
+    .telegram-channel-heading p {
+        margin: 0;
+    }
+
+    .telegram-channel-heading h2 {
+        color: #e5ede6;
+        font-size: 15px;
+    }
+
+    .telegram-channel-heading p,
+    .telegram-channel-notes p {
+        margin-top: 6px;
+        color: #a4b1a7;
+        font-size: 12px;
+        line-height: 1.55;
+    }
+
+    .telegram-link-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 12px;
+        border: 1px solid #354239;
+        border-radius: 8px;
+        background: #121a15;
+    }
+
+    .telegram-link-row a {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        min-width: 0;
+        overflow-wrap: anywhere;
+        color: var(--dash-accent);
+        font-size: 12px;
+    }
+
+    .telegram-channel-notes p {
+        margin: 0;
+    }
+
+    .telegram-channel .auth-error,
+    .telegram-channel .auth-notice {
+        margin: 0;
+    }
+
+    @media (max-width: 640px) {
+        .telegram-channel-heading {
+            align-items: flex-start;
+            flex-wrap: wrap;
+        }
+
+        .telegram-channel-heading > div {
+            flex-basis: calc(100% - 60px);
+        }
+
+        .telegram-link-row {
+            align-items: stretch;
+            flex-direction: column;
+        }
+    }
+
     .product-description-field,
     .product-image-field {
         grid-column: auto;

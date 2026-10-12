@@ -14,7 +14,7 @@ FloralAI is a florist-focused assistant preview built with Next.js App Router, R
 | Product catalog | Photo, price and description management stored per Supabase account; product details feed the private assistant test chat |
 | `/api/chat` | Validated request shape; mock mode by default; optional server-side OpenAI-compatible provider |
 | Flower shop order assistant (`/flower-shop`) | Guided ordering in English, Russian and Kazakh; PostgreSQL persistence requires database setup |
-| Telegram florist bot (`/api/telegram/webhook`) | Webhook code ready; requires a BotFather token, public deployment and PostgreSQL; not connected yet |
+| Shared Telegram bot (`/api/telegram/webhook`) | Free catalog replies with a personal start link per business; requires one BotFather token and server-side Supabase service-role key |
 | PostgreSQL data model | Prisma schema includes flower orders; connect `DATABASE_URL` before saving orders |
 | Vercel hosting | Deployed on the free Hobby plan; public demo link below |
 | Supabase Auth, Google OAuth, card payments, WhatsApp, Instagram and Google Business | Require provider account setup and credentials; not configured by default |
@@ -23,7 +23,7 @@ The app is a functional product preview, not a production-ready multi-tenant Saa
 
 Catalog product rows are protected by Supabase row-level security and scoped to the signed-in user. Product photos are stored in a public Supabase Storage bucket so they can later be shown to customers; do not upload private or sensitive images. The business profile and other dashboard data are still browser-local.
 
-The flower-shop page and Telegram handler use a deterministic guided conversation, not an LLM. Sample products and prices are illustrative; there is no live inventory, card payment, or owner order-management screen. Customers can choose cash on delivery or a bank transfer after the shop confirms the order. PostgreSQL is required to save confirmed orders. Telegram message delivery uses Telegram's Bot API (no per-message API charge), but the bot still needs a public host and a token from BotFather. The conversation does not collect or store card numbers.
+The flower-shop page uses a deterministic guided conversation, not an LLM. Telegram replies are also deterministic and read a business's catalog; no paid AI provider is called. The shared Telegram bot sends product names, descriptions, and prices, not photos, orders, or inventory availability. Telegram's Bot API has no per-message charge. Free hosting and Supabase quotas still apply; no uptime guarantee is provided.
 
 ## Requirements
 
@@ -47,8 +47,9 @@ See `.env.example` for the complete list. At minimum, the app uses `NEXT_PUBLIC_
 
 - `USE_MOCK_AI=true` keeps all chat replies deterministic and local to the server process.
 - `USE_MOCK_AI=false` enables the server-side OpenAI-compatible call and requires `OPENAI_API_KEY`.
-- `DATABASE_URL` is required for the flower assistant to persist confirmed orders.
-- `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` enable real Supabase Auth. The legacy `NEXT_PUBLIC_SUPABASE_ANON_KEY` is accepted if the project does not have a publishable key.
+- `DATABASE_URL` is required for the flower-order demo to persist confirmed orders.
+- `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` enable Supabase Auth and the catalog. The legacy `NEXT_PUBLIC_SUPABASE_ANON_KEY` is accepted if the project does not have a publishable key.
+- `SUPABASE_SERVICE_ROLE_KEY` is required only by the Telegram webhook to read the selected business catalog and store Telegram chat routing. Add it only as a server-side Vercel environment variable; never expose it with a `NEXT_PUBLIC_` prefix.
 - Never use a `NEXT_PUBLIC_` prefix for provider secrets, database credentials, Stripe secrets, or Supabase service-role keys.
 - Set `NEXT_PUBLIC_APP_URL` to the public deployment URL in Vercel before enabling Telegram or relying on sitemap links.
 
@@ -81,9 +82,18 @@ Email one-time-code sign-in/registration and Google OAuth are handled by Supabas
 3. For Google sign-in, create OAuth credentials in Google Cloud Console, enable the Google provider in Supabase, and add the Supabase callback URL shown by its provider settings to the Google OAuth client's authorized redirect URIs. Add the app callback URLs above to Supabase's redirect allow list.
 4. In **Authentication → Email Templates → Magic Link**, use the `{{ .Token }}` template variable so Supabase sends a six-digit code (rather than only a sign-in link). Configure production SMTP and the email OTP expiry in Supabase before inviting real users. Supabase enforces its OTP request limits; FloralAI also applies a 60-second resend cooldown in the form. Google OAuth continues to use the `/auth/callback` route.
 
-### Product catalog setup
+### Product catalog and Telegram setup
 
-Before using **Dashboard → Product catalog**, run `supabase/migrations/20261012190000_product_catalog.sql` once in the Supabase Dashboard's **SQL Editor**. It creates the catalog table, owner-only row-level security policies, a public `product-images` bucket with a 5 MB image limit, and owner-scoped upload/delete policies. The migration does not require a service-role key or `DATABASE_URL`. The table is account-scoped; only the product photos are public.
+Run the SQL migrations in `supabase/migrations/` once, in timestamp order, in Supabase **SQL Editor**. The first migration creates the catalog and public photo bucket; the second creates owner-scoped shared Telegram setup and private chat-routing storage.
+
+To activate the one shared Telegram bot:
+
+1. Create one bot with `@BotFather` and add `TELEGRAM_BOT_TOKEN` to the Vercel project's server-side Production environment variables.
+2. Add a long random `TELEGRAM_WEBHOOK_SECRET` using only letters, digits, `_` or `-`, plus the Supabase project's `SUPABASE_SERVICE_ROLE_KEY`. Do not put `NEXT_PUBLIC_` before the service-role key; never share either secret in chat or commit it.
+3. Set `NEXT_PUBLIC_APP_URL` to `https://floral-ai-pi.vercel.app` and redeploy after adding environment variables.
+4. A signed-in business owner opens **Dashboard → Channels → Connect Telegram**. FloralAI registers its webhook and creates a private deep link for that business. Share that link with customers.
+
+Each shop is routed by its own random Telegram start code; the bot reads only that owner's product catalog. Customers can send `/catalog` to list products and prices. Pausing the connection stops replies for that business. No paid AI is used; the free bot only answers with catalog information. The webhook uses `SUPABASE_SERVICE_ROLE_KEY` server-side to look up the business and route Telegram chats; the `telegram_chats` table has no client access policies.
 
 The server checks Supabase users before serving the dashboard when auth is enabled; Next.js proxy refreshes the auth cookie. This is not sufficient production authorization for the rest of the product: API endpoints, order ownership, database records and tenant isolation still need server-side authorization before real business data is used.
 
