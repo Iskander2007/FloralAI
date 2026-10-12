@@ -87,6 +87,15 @@ export async function POST() {
         return NextResponse.json({ error: "Please sign in to connect Telegram." }, { status: 401 });
     }
 
+    const [{ data: business, error: businessError }, { count: productCount, error: catalogError }, { error: orderStorageError }] = await Promise.all([
+        supabase.from("business_profiles").select("profile").eq("owner_id", userData.user.id).maybeSingle(),
+        supabase.from("catalog_products").select("id", { count: "exact", head: true }).eq("owner_id", userData.user.id),
+        supabase.from("sales_orders").select("id", { head: true }).eq("owner_id", userData.user.id).limit(1),
+    ]);
+    if (businessError || catalogError || orderStorageError) return NextResponse.json({ error: "Хранилище заявок пока недоступно. Попробуйте подключить бота позже." }, { status: 503 });
+    if (!business?.profile) return NextResponse.json({ error: "Сначала сохраните профиль бизнеса в разделе «Настройки»." }, { status: 409 });
+    if (!productCount) return NextResponse.json({ error: "Добавьте хотя бы один товар с ценой в каталог, затем подключите Telegram." }, { status: 409 });
+
     let config: ReturnType<typeof getTelegramConfig>;
     try {
         config = getTelegramConfig();
@@ -112,6 +121,7 @@ export async function POST() {
                 url: config.webhookUrl,
                 secret_token: config.secret,
                 allowed_updates: ["message"],
+                max_connections: 1,
             }),
             signal: AbortSignal.timeout(10_000),
             cache: "no-store",

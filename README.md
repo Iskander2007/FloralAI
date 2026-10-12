@@ -1,37 +1,24 @@
 # FloralAI
 
-FloralAI is a florist-focused assistant preview built with Next.js App Router, React, TypeScript and Tailwind CSS. It includes one consistent dark, responsive design across the product site, flower-order demo, account screens, onboarding flow and every dashboard section.
+FloralAI — сайт и кабинет для цветочного магазина на Next.js App Router, React, TypeScript и Supabase. Основной интерфейс на русском. Репозиторий: [Iskander2007/FloralAI](https://github.com/Iskander2007/FloralAI), сайт: [floral-ai-pi.vercel.app](https://floral-ai-pi.vercel.app).
 
-## Current status
+## Что реализовано
 
-| Capability | Status |
-| --- | --- |
-| Landing page and responsive navigation | Working |
-| Five interactive sample business demos | Working with deterministic mock replies |
-| Signup and login | Supabase email/password and Google OAuth when configured; otherwise a clearly labelled browser-local demo |
-| Business profile and dashboard data | Browser-local preview data; not yet stored in a user-owned production database |
-| Dashboard, assistant test chat, knowledge editor and empty states | Working with browser-local demo data |
-| Product catalog | Photo, price and description management stored per Supabase account; product details feed the private assistant test chat |
-| `/api/chat` | Validated request shape; mock mode by default; optional server-side OpenAI-compatible provider |
-| Flower shop order assistant (`/flower-shop`) | Guided ordering in English, Russian and Kazakh; PostgreSQL persistence requires database setup |
-| Shared Telegram bot (`/api/telegram/webhook`) | Free catalog replies with a personal start link per business; requires one BotFather token and server-side Supabase service-role key |
-| PostgreSQL data model | Prisma schema includes flower orders; connect `DATABASE_URL` before saving orders |
-| Vercel hosting | Deployed on the free Hobby plan; public demo link below |
-| Supabase Auth, Google OAuth, card payments, WhatsApp, Instagram and Google Business | Require provider account setup and credentials; not configured by default |
+- Вход по коду из письма и через Google с Supabase Auth.
+- Первичная настройка и редактор профиля: описание, услуги, адрес, часы работы, контакты, условия и стоимость доставки.
+- Каталог товаров с фотографиями, описанием и ценой в тенге.
+- Общий Telegram-бот с отдельной ссылкой для каждого магазина.
+- Сбор заявки: повод → бюджет → товар → имя → телефон → адрес → дата доставки → проверка → подтверждение клиентом.
+- Раздел «Заявки»: подтвердить, завершить или отменить заявку.
+- Тест ассистента в кабинете использует сохранённый профиль и каталог, но не создаёт настоящие заявки.
 
-The app is a functional product preview, not a production-ready multi-tenant SaaS. Do not put real customer data in it. When Supabase is configured, dashboard navigation is protected by a verified server session, but business/profile data remains in this browser and the chat/order APIs are not tenant-isolated.
+Профиль, каталог и заявки принадлежат аккаунту и защищены Supabase RLS. Копия профиля в браузере используется для интерфейса; успешное серверное сохранение обязательно. Ошибки записи показываются как ошибки, без сообщения об успешном сохранении.
 
-Catalog product rows are protected by Supabase row-level security and scoped to the signed-in user. Product photos are stored in a public Supabase Storage bucket so they can later be shown to customers; do not upload private or sensitive images. The business profile and other dashboard data are still browser-local.
+Telegram-бот работает по управляемому сценарию без платного AI API. Он отвечает на типовые вопросы по сохранённым данным и предлагает реальные товары из каталога. Наличие и возможность доставки подтверждает владелец. Оплату и реквизиты бот не собирает.
 
-The flower-shop page uses a deterministic guided conversation, not an LLM. Telegram replies are also deterministic and read a business's catalog; no paid AI provider is called. The shared Telegram bot sends product names, descriptions, and prices, not photos, orders, or inventory availability. Telegram's Bot API has no per-message charge. Free hosting and Supabase quotas still apply; no uptime guarantee is provided.
+## Локальный запуск
 
-## Requirements
-
-- Node.js 20.9 or newer
-- npm
-- PostgreSQL only when enabling persistence
-
-## Install and run locally
+Нужны Node.js 20.9+ и npm:
 
 ```powershell
 npm install
@@ -39,120 +26,59 @@ Copy-Item .env.example .env.local
 npm run dev
 ```
 
-Open `http://localhost:3000`. The product works without API keys in mock mode. `npm run build` generates Prisma Client and creates a production build; `npm run lint` runs ESLint.
-Run `npm test` to check supported languages, translated interface labels, and English fallback behavior.
-
-## Environment variables
-
-See `.env.example` for the complete list. At minimum, the app uses `NEXT_PUBLIC_APP_URL` and defaults to `USE_MOCK_AI=true`.
-
-- `USE_MOCK_AI=true` keeps all chat replies deterministic and local to the server process.
-- `USE_MOCK_AI=false` enables the server-side OpenAI-compatible call and requires `OPENAI_API_KEY`.
-- `DATABASE_URL` is required for the flower-order demo to persist confirmed orders.
-- `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` enable Supabase Auth and the catalog. The legacy `NEXT_PUBLIC_SUPABASE_ANON_KEY` is accepted if the project does not have a publishable key.
-- `SUPABASE_SERVICE_ROLE_KEY` is required only by the Telegram webhook to read the selected business catalog and store Telegram chat routing. Add it only as a server-side Vercel environment variable; never expose it with a `NEXT_PUBLIC_` prefix.
-- Never use a `NEXT_PUBLIC_` prefix for provider secrets, database credentials, Stripe secrets, or Supabase service-role keys.
-- Set `NEXT_PUBLIC_APP_URL` to the public deployment URL in Vercel before enabling Telegram or relying on sitemap links.
-
-## Database setup
-
-The schema is in `prisma/schema.prisma`. It models users, businesses, assistants, approved knowledge, conversations, messages, leads, appointments, integrations, subscriptions, team members, notifications and florist orders.
-
-Set `DATABASE_URL` in `.env.local` first. For a new database, validate and create the schema:
+Откройте http://localhost:3000. Публичные страницы и примеры доступны без настройки Supabase; для рабочего кабинета и сохранения данных необходим Supabase.
 
 ```powershell
-npx prisma validate
-npx prisma db push
-npx prisma generate
+npm test
+npm run lint
+npm run build
 ```
 
-The flower assistant writes confirmed orders to PostgreSQL through `/api/flower-assistant`. The rest of the workspace remains browser-local. The public order endpoint and demo login are not production authentication; do not use them with real customer data before adding authenticated merchant access, rate limiting, privacy/retention controls and a protected order-management screen.
+Тесты проверяют валидацию профиля, границы аккаунтов, сценарий заявки, пересмотр цены, неизвестную стоимость доставки, повторные Telegram-события и ошибки сохранения. Тесты Telegram подменяют API и не отправляют реальные сообщения.
 
-## AI configuration
+## Настройка Supabase
 
-`src/lib/ai.ts` is the provider boundary. `/api/chat` validates message and business-context sizes before calling `generateAIResponse()`. Mock mode is on unless `USE_MOCK_AI` is explicitly set to `false`. The provider key is read only by the server module.
+1. Укажите NEXT_PUBLIC_SUPABASE_URL и NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY локально и в Vercel. Поддерживается старый NEXT_PUBLIC_SUPABASE_ANON_KEY.
+2. Примените SQL из supabase/migrations/ по порядку: каталог, общий Telegram-бот, затем 20261012220632_business_sales.sql с профилями, заявками, историей и транзакцией сохранения.
+3. В Authentication → URL Configuration укажите адрес сайта и точные callback URL: http://localhost:3000/auth/callback и https://floral-ai-pi.vercel.app/auth/callback.
+4. Для Google настройте OAuth-провайдер Supabase и разрешённый callback в Google Cloud.
+5. В Email Templates → Magic Link используйте {{ .Token }} для шестизначного кода; настройте SMTP для отправки писем.
 
-Before enabling provider calls in production, add authenticated sessions, per-tenant usage accounting, server-derived business context, rate limiting, abuse controls, audit logging and provider timeout/error monitoring. The current route accepts business context from its caller and must not be treated as a production endpoint.
+business_profiles хранит профиль владельца. sales_orders содержит неизменяемые детали и цены на момент подтверждения; владелец меняет только статус. sales_messages хранит историю, telegram_chats — черновик и ревизию диалога. Транзакция commit_telegram_sales_turn доступна только серверной роли: проверяет ревизию, актуальные цены и профиль, сохраняет заявку и ответ вместе. Ответ клиенту отправляется после фиксации транзакции. Повторное событие использует сохранённый ответ и не создаёт вторую заявку.
 
-## Authentication setup
+Пользователь получает только свои записи. Фотографии каталога находятся в публичном Storage bucket, чтобы их можно было показывать покупателям.
 
-Email one-time-code sign-in/registration and Google OAuth are handled by Supabase Auth when configured. Without the two public Supabase environment variables the app remains in a labelled local demo mode. Passwords are never written to `localStorage`. The business profile and workspace are still browser-local, so authentication does not yet provide multi-device business data or production tenant isolation.
+## Настройка Telegram
 
-1. Create a Supabase project and add `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` to `.env.local` and the deployment environment. The old anon key can be used as a fallback.
-2. In Supabase **Authentication → URL Configuration**, set the Site URL to the app origin and allow these exact callback URLs: `http://localhost:3000/auth/callback` for local development and `https://YOUR_DEPLOYMENT_HOST/auth/callback` for production. Do not use a wildcard redirect.
-3. For Google sign-in, create OAuth credentials in Google Cloud Console, enable the Google provider in Supabase, and add the Supabase callback URL shown by its provider settings to the Google OAuth client's authorized redirect URIs. Add the app callback URLs above to Supabase's redirect allow list.
-4. In **Authentication → Email Templates → Magic Link**, use the `{{ .Token }}` template variable so Supabase sends a six-digit code (rather than only a sign-in link). Configure production SMTP and the email OTP expiry in Supabase before inviting real users. Supabase enforces its OTP request limits; FloralAI also applies a 60-second resend cooldown in the form. Google OAuth continues to use the `/auth/callback` route.
+В серверных переменных Vercel задайте:
 
-### Product catalog and Telegram setup
+- TELEGRAM_BOT_TOKEN — токен общего бота от BotFather.
+- TELEGRAM_WEBHOOK_SECRET — случайная строка из букв, цифр, _ и -.
+- SUPABASE_SERVICE_ROLE_KEY — серверный ключ проекта.
+- NEXT_PUBLIC_APP_URL=https://floral-ai-pi.vercel.app.
 
-Run the SQL migrations in `supabase/migrations/` once, in timestamp order, in Supabase **SQL Editor**. The first migration creates the catalog and public photo bucket; the second creates owner-scoped shared Telegram setup and private chat-routing storage.
+Не добавляйте NEXT_PUBLIC_ к секретам и не храните их в Git. После изменения переменных выполните повторное развёртывание.
 
-To activate the one shared Telegram bot:
+Владелец сохраняет профиль, добавляет товары, затем открывает «Каналы → Подключить Telegram». Приложение проверяет профиль, каталог и таблицы заявок, регистрирует webhook и выдаёт персональную ссылку. Клиент начинает разговор по ссылке своего магазина. Обрабатываются только личные чаты с проверенным Telegram secret header.
 
-1. Create one bot with `@BotFather` and add `TELEGRAM_BOT_TOKEN` to the Vercel project's server-side Production environment variables.
-2. Add a long random `TELEGRAM_WEBHOOK_SECRET` using only letters, digits, `_` or `-`, plus the Supabase project's `SUPABASE_SERVICE_ROLE_KEY`. Do not put `NEXT_PUBLIC_` before the service-role key; never share either secret in chat or commit it.
-3. Set `NEXT_PUBLIC_APP_URL` to `https://floral-ai-pi.vercel.app` and redeploy after adding environment variables.
-4. A signed-in business owner opens **Dashboard → Channels → Connect Telegram**. FloralAI registers its webhook and creates a private deep link for that business. Share that link with customers.
+Заявка появляется в кабинете после подтверждения клиентом. Неизвестная стоимость доставки остаётся неизвестной, а не превращается в ноль. Новая ссылка магазина начинает новый черновик без переноса контактов из другого магазина. Команды /start, /catalog, /new и /cancel управляют черновиком; отмена сохранённой заявки требует связи с магазином.
 
-Each shop is routed by its own random Telegram start code; the bot reads only that owner's product catalog. Customers can send `/catalog` to list products and prices. Pausing the connection stops replies for that business. No paid AI is used; the free bot only answers with catalog information. The webhook uses `SUPABASE_SERVICE_ROLE_KEY` server-side to look up the business and route Telegram chats; the `telegram_chats` table has no client access policies.
+Подключение и миграции проверяются отдельно в целевой среде: наличие кода само по себе не означает, что бот и хранилище работают в production. Внешние уведомления владельцу и синхронизация склада пока не подключены. Заявки проверяются в кабинете.
 
-The server checks Supabase users before serving the dashboard when auth is enabled; Next.js proxy refreshes the auth cookie. This is not sufficient production authorization for the rest of the product: API endpoints, order ownership, database records and tenant isolation still need server-side authorization before real business data is used.
+## Отдельные демонстрации
 
-## Payments
+/flower-shop — самостоятельный пример с образцами товаров. Его прежнее PostgreSQL-хранилище использует Prisma и DATABASE_URL; оно не участвует в реальных заявках магазинов и не предназначено для данных клиентов.
 
-Card payments, including Visa, are not connected. No card form is present and FloralAI does not collect or store PAN/CVV data. To enable payments, the business owner must first open a merchant account with a supported payment provider; implementation should use that provider's hosted checkout and verified server-side webhooks. Do not ask customers to message their card details.
+WhatsApp, Instagram, Google Business, встраиваемый виджет и карточные платежи остаются демонстрационными разделами. Модуль src/lib/ai.ts сохранён для будущей интеграции; рабочие /api/chat и Telegram используют управляемый сценарий и серверный контекст.
 
-## Telegram florist bot and payments
+## Развёртывание
 
-To connect a free Telegram bot after deploying the app:
-
-1. Create a bot with `@BotFather` and set `TELEGRAM_BOT_TOKEN` in the hosting provider's server-side environment.
-2. Set a long random `TELEGRAM_WEBHOOK_SECRET` there as well. Never expose either value in client code or commit them.
-3. Set `NEXT_PUBLIC_APP_URL` to the public HTTPS deployment URL. Configure the webhook from PowerShell:
-
-```powershell
-$body = @{
-  url = "$env:NEXT_PUBLIC_APP_URL/api/telegram/webhook"
-  secret_token = $env:TELEGRAM_WEBHOOK_SECRET
-  allowed_updates = @("message")
-} | ConvertTo-Json -Depth 5
-Invoke-RestMethod -Method Post `
-  -Uri "https://api.telegram.org/bot$env:TELEGRAM_BOT_TOKEN/setWebhook" `
-  -ContentType "application/json" -Body $body
-```
-
-The webhook only accepts private Telegram chats, validates Telegram's secret header, keeps each chat's order progress in PostgreSQL, and uses the same guided flower-order workflow as the website. A free bot API does not provide free hosting or a database. WhatsApp, Instagram, Facebook, Google Business, Stripe, merchant notifications and a florist order-management screen are not connected. The website demo is available at `/flower-shop`; online card payments are not processed.
-
-## GitHub, team roles and presentation
-
-Do not claim that a channel or integration is live until it has been configured and tested.
-
-- GitHub repository: [Iskander2007/FloralAI](https://github.com/Iskander2007/FloralAI).
-- Live deployment: [FloralAI on Vercel](https://floral-ai-pi.vercel.app).
-- Flower shop demo: [Open the order conversation](https://floral-ai-pi.vercel.app/flower-shop). Catalog and prices are examples; without a configured PostgreSQL database, confirmed orders are not persisted.
-- Database: not configured in production. Set `DATABASE_URL` in Vercel and apply the Prisma schema before using order persistence.
-- Telegram: not connected. Set the server-side bot token, webhook secret, and `NEXT_PUBLIC_APP_URL`, then register the HTTPS webhook using the command above.
-- Payments: card payments are not connected. The demo does not collect money.
-- Team roles and individual contributions: record each participant's actual work and meaningful GitHub commits here before presenting; do not invent contributions.
-
-## Deployment checklist
-
-- Configure production database and apply the Prisma schema if order persistence is required.
-- Implement server-backed auth, authorization, tenant isolation and protected API routes.
-- Add a protected florist order inbox and merchant notifications before taking real orders.
-- Derive AI context from the authorized database record, not request JSON.
-- Add rate limiting, usage limits and retention/deletion controls.
-- Store integration tokens encrypted and use signed, verified provider webhooks.
-- Configure and test Stripe only after billing policy and webhook handling are ready.
-- Set `NEXT_PUBLIC_APP_URL` to the deployed URL, review privacy/terms and set production metadata.
-- Run `npm run lint` and `npm run build` against production environment values.
-- Add automated tests for onboarding, authentication, tenant boundaries, chat validation, usage limits and handoff behavior.
-
-## Project layout
+GitHub main связан с Vercel. Перед публикацией примените миграции Supabase, настройте переменные среды и выполните проверки. После публикации проверьте вход, сохранение профиля с другого браузера, каталог, полный Telegram-диалог и смену статуса заявки.
 
 ```text
-src/app/          Next.js routes, pages and API routes
-src/components/   Shared client components
-src/lib/          Workspace types, flower-order flow, Prisma client and AI abstraction
-prisma/           PostgreSQL data model
+src/app/          Страницы и API
+src/components/   Редактор бизнеса, каталог, каналы и заявки
+src/lib/          Профиль бизнеса, сценарий продаж, авторизация и переводы
+supabase/         Миграции рабочего хранилища
+prisma/           Отдельная демонстрационная модель
 ```

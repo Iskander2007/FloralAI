@@ -191,7 +191,7 @@ export function TelegramChannel({ businessName }: { businessName: string }) {
                 <span className="channel-card-icon"><Send size={18} /></span>
                 <div>
                     <h2>{t("One shared FloralAI Telegram bot")}</h2>
-                    <p>{t("Customers open your personal link; the bot answers using your catalog.")}</p>
+                    <p>Клиенты переходят по вашей ссылке. Бот учитывает сохранённый профиль бизнеса, предлагает товары из каталога и собирает заявки.</p>
                 </div>
                 <span className={`channel-state ${setup?.active ? "channel-available" : ""}`}>
                     {t(loading ? "Loading..." : setup?.active ? "CONNECTED" : "NOT CONNECTED")}
@@ -220,8 +220,8 @@ export function TelegramChannel({ businessName }: { businessName: string }) {
             )}
 
             <div className="telegram-channel-notes">
-                <p>{t("Free shared bot · no paid AI. It can show product names, descriptions and prices from your catalog.")}</p>
-                <p>{t("The public bot link lets customers view your product catalog. Do not add private information.")}</p>
+                <p>Ассистент уточняет повод, бюджет, имя, телефон, адрес и время доставки. После подтверждения клиентом заявка появится в разделе «Заявки».</p>
+                <p>Изменения профиля доступны боту после нажатия «Сохранить данные». В каталоге и описании бизнеса указывайте информацию для клиентов.</p>
             </div>
 
             <div className="product-form-actions">

@@ -1,0 +1,524 @@
+.business-profile-editor,
+.sales-orders {
+    --business-line: var(--dash-line, #2b382f);
+    --business-muted: var(--dash-muted, #a4b1a7);
+    --business-text: var(--dash-text, #eff5ef);
+    --business-accent: var(--dash-accent, #c7f36b);
+    display: grid;
+    gap: 20px;
+    min-width: 0;
+    color: var(--business-text);
+}
+
+.business-tools-intro {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 20px;
+    border: 1px solid #c7f36b30;
+    border-radius: 13px;
+    background: #c7f36b08;
+}
+
+.business-tools-intro-icon {
+    display: grid;
+    width: 42px;
+    height: 42px;
+    flex: 0 0 42px;
+    place-items: center;
+    border-radius: 11px;
+    background: #c7f36b16;
+    color: var(--business-accent);
+}
+
+.business-tools-intro h2,
+.sales-orders-heading h2 {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 650;
+    line-height: 1.5;
+}
+
+.business-tools-intro p,
+.sales-orders-heading p,
+.business-section-description {
+    margin: 6px 0 0;
+    color: var(--business-muted);
+    font-size: 13px;
+    line-height: 1.7;
+}
+
+.business-section {
+    min-width: 0;
+    margin: 0;
+    padding: 18px 22px 22px;
+    border: 1px solid var(--business-line);
+    border-radius: 13px;
+    background: var(--dash-panel, #111815);
+}
+
+.business-section legend {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 0 7px;
+    color: #eaf2e8;
+    font-size: 15px;
+    font-weight: 650;
+}
+
+.business-section legend svg {
+    color: var(--business-accent);
+}
+
+.business-fields {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px;
+}
+
+.business-section-description {
+    margin: 0 0 20px;
+}
+
+.business-fields + .business-section-description {
+    margin: 18px 0 0;
+}
+
+.business-field {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 8px;
+    color: #d4dfd5;
+    font-size: 12px;
+    font-weight: 550;
+    line-height: 1.5;
+}
+
+.business-field-wide {
+    grid-column: 1 / -1;
+}
+
+.business-field input,
+.business-field textarea,
+.business-field select {
+    width: 100%;
+    min-width: 0;
+    min-height: 44px;
+    padding: 11px 12px;
+    border: 1px solid #3b493f;
+    border-radius: 8px;
+    background: #0c120e;
+    color: var(--business-text);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 400;
+    line-height: 1.6;
+    color-scheme: dark;
+}
+
+.business-field textarea {
+    resize: vertical;
+}
+
+.business-field input::placeholder,
+.business-field textarea::placeholder {
+    color: #7e9084;
+    opacity: 1;
+}
+
+.business-field input:focus,
+.business-field textarea:focus,
+.business-field select:focus {
+    outline: 2px solid #c7f36b70;
+    outline-offset: 1px;
+    border-color: var(--business-accent);
+}
+
+.business-field-hint {
+    color: var(--business-muted);
+    font-size: 11px;
+    font-weight: 400;
+    line-height: 1.6;
+}
+
+.business-offline-option {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-top: 22px;
+    padding: 17px;
+    border: 1px solid #c7f36b30;
+    border-radius: 9px;
+    background: #c7f36b08;
+}
+
+.business-offline-option > svg {
+    flex: 0 0 18px;
+    margin: 2px 0 0;
+    color: var(--business-accent);
+}
+
+.business-offline-option > span {
+    display: grid;
+    gap: 6px;
+}
+
+.business-offline-option strong {
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.business-offline-option > span > span {
+    color: var(--business-muted);
+    font-size: 12px;
+    line-height: 1.65;
+}
+
+.business-policy-field {
+    margin-top: 22px;
+}
+
+.business-save-bar,
+.sales-orders-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+}
+
+.business-save-feedback {
+    flex: 1;
+}
+
+.business-primary-button,
+.business-secondary-button {
+    display: inline-flex;
+    min-height: 42px;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 15px;
+    border: 1px solid var(--business-accent);
+    border-radius: 8px;
+    background: var(--business-accent);
+    color: #11170d;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 650;
+    line-height: 1.5;
+    text-align: center;
+    cursor: pointer;
+    transition: background 150ms ease, border-color 150ms ease;
+}
+
+.business-primary-button:hover {
+    background: #d8ff92;
+    border-color: #d8ff92;
+}
+
+.business-secondary-button {
+    border-color: #3b493f;
+    background: #17211b;
+    color: #dce6dd;
+}
+
+.business-secondary-button:hover {
+    border-color: #719257;
+    background: #202d24;
+}
+
+.business-primary-button:disabled,
+.business-secondary-button:disabled {
+    opacity: .5;
+    cursor: wait;
+}
+
+.business-primary-button:focus-visible,
+.business-secondary-button:focus-visible {
+    outline: 2px solid var(--business-accent);
+    outline-offset: 4px;
+}
+
+.business-feedback {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin: 0;
+    padding: 12px 14px;
+    border: 1px solid #c7f36b35;
+    border-radius: 8px;
+    background: #c7f36b0a;
+    color: var(--business-accent);
+    font-size: 12px;
+    line-height: 1.65;
+}
+
+.business-feedback > svg {
+    flex: 0 0 auto;
+    margin-top: 2px;
+}
+
+.business-feedback-error {
+    border-color: #f29e8d40;
+    background: #f29e8d0c;
+    color: #ffb7a9;
+}
+
+.sales-orders-heading {
+    align-items: flex-start;
+}
+
+.sales-orders-heading > .business-secondary-button {
+    flex: 0 0 auto;
+}
+
+.sales-orders-loading,
+.sales-orders-empty {
+    margin: 0;
+    padding: 36px 20px;
+    border: 1px solid var(--business-line);
+    border-radius: 13px;
+    background: var(--dash-panel, #111815);
+    color: var(--business-muted);
+    font-size: 13px;
+    text-align: center;
+}
+
+.sales-orders-empty {
+    display: grid;
+    justify-items: center;
+    gap: 12px;
+}
+
+.sales-orders-empty > svg {
+    color: var(--business-accent);
+}
+
+.sales-orders-empty h3 {
+    margin: 0;
+    color: var(--business-text);
+    font-size: 16px;
+}
+
+.sales-orders-empty p {
+    max-width: 470px;
+    margin: 0;
+    line-height: 1.8;
+}
+
+.sales-orders-list {
+    display: grid;
+    gap: 16px;
+}
+
+.sales-order-card {
+    min-width: 0;
+    overflow: hidden;
+    border: 1px solid var(--business-line);
+    border-radius: 13px;
+    background: var(--dash-panel, #111815);
+}
+
+.sales-order-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 19px 21px;
+    border-bottom: 1px solid var(--business-line);
+}
+
+.sales-order-top h3 {
+    margin: 0 0 6px;
+    font-size: 15px;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+}
+
+.sales-order-top > div > span {
+    color: var(--business-muted);
+    font-size: 11px;
+}
+
+.sales-order-status {
+    flex: 0 0 auto;
+    padding: 5px 9px;
+    border: 1px solid #e6c87440;
+    border-radius: 6px;
+    background: #e6c8740c;
+    color: #e6c874;
+    font-size: 10px;
+    line-height: 1.5;
+}
+
+.sales-order-status-confirmed,
+.sales-order-status-fulfilled {
+    border-color: #c7f36b35;
+    background: #c7f36b0c;
+    color: var(--business-accent);
+}
+
+.sales-order-status-cancelled {
+    border-color: #82928740;
+    background: #8292870c;
+    color: #b2beb4;
+}
+
+.sales-order-details {
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(220px, 1fr);
+    gap: 24px;
+    padding: 20px 21px;
+}
+
+.sales-order-contact {
+    display: grid;
+    align-content: start;
+    gap: 12px;
+}
+
+.sales-order-contact > p {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    margin: 0;
+    color: #d6e0d7;
+    font-size: 12px;
+    line-height: 1.65;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.sales-order-contact > p > svg {
+    flex: 0 0 auto;
+    margin-top: 2px;
+    color: #92a898;
+}
+
+.sales-order-contact a {
+    color: var(--business-accent);
+    text-underline-offset: 3px;
+}
+
+.sales-order-contact > .sales-order-additional {
+    display: block;
+    color: var(--business-muted);
+}
+
+.sales-order-additional b {
+    color: #d6e0d7;
+    font-weight: 550;
+}
+
+.sales-order-price {
+    padding: 16px;
+    border: 1px solid var(--business-line);
+    border-radius: 9px;
+    background: #0c120e;
+}
+
+.sales-order-price dl {
+    display: grid;
+    gap: 11px;
+    margin: 0;
+}
+
+.sales-order-price dl > div {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    color: var(--business-muted);
+    font-size: 12px;
+}
+
+.sales-order-price dd {
+    margin: 0;
+    color: #e8f0e8;
+    text-align: right;
+}
+
+.sales-order-price .sales-order-total {
+    padding-top: 12px;
+    border-top: 1px solid var(--business-line);
+    color: #e8f0e8;
+    font-weight: 650;
+}
+
+.sales-order-total dd {
+    color: var(--business-accent);
+    font-size: 15px;
+}
+
+.sales-order-price > p {
+    margin: 12px 0 0;
+    color: #899b8e;
+    font-size: 10px;
+    line-height: 1.6;
+}
+
+.sales-order-actions {
+    display: flex;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 16px 21px;
+    border-top: 1px solid var(--business-line);
+}
+
+.business-cancel-button {
+    color: #ecb2a6;
+}
+
+@media (max-width: 700px) {
+    .business-fields,
+    .sales-order-details {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .business-section {
+        padding: 16px;
+    }
+
+    .business-tools-intro {
+        padding: 16px;
+    }
+
+    .business-tools-intro h2,
+    .sales-orders-heading h2 {
+        font-size: 15px;
+    }
+
+    .business-save-bar {
+        align-items: stretch;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .business-save-feedback:empty {
+        display: none;
+    }
+
+    .sales-orders-heading,
+    .sales-order-top {
+        flex-wrap: wrap;
+    }
+
+    .sales-order-top,
+    .sales-order-details,
+    .sales-order-actions {
+        padding: 16px;
+    }
+
+    .sales-order-actions > button {
+        flex: 1 1 100%;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .business-primary-button,
+    .business-secondary-button {
+        transition: none;
+    }
+}

@@ -1,118 +1,39 @@
-import { NextRequest, NextResponse } from "next/server";
-import { generateAIResponse } from "@/lib/ai";
-import type { AssistantContext, ChatTurn } from "@/lib/ai";
-import type { AssistantProduct } from "@/lib/catalog";
+import { NextResponse } from "next/server";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { parseBusinessProfile } from "@/lib/business";
+import { parseSalesState, runSalesTurn, type SalesProduct } from "@/lib/sales-assistant";
 
 export const runtime = "nodejs";
 
-function isAssistantProduct(value: unknown): value is AssistantProduct {
-    if (!value || typeof value !== "object") return false;
-    const product = value as Record<string, unknown>;
-    return (
-        typeof product.name === "string" &&
-        product.name.trim().length > 0 &&
-        product.name.length <= 120 &&
-        typeof product.price_kzt === "number" &&
-        Number.isSafeInteger(product.price_kzt) &&
-        product.price_kzt >= 0 &&
-        typeof product.description === "string" &&
-        product.description.length <= 1000
-    );
-}
-
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
+    const origin = request.headers.get("origin");
+    if (origin && origin !== new URL(request.url).origin) return NextResponse.json({ error: "Недопустимый источник запроса." }, { status: 403 });
+    const client = await createSupabaseServerClient();
+    if (!client) return NextResponse.json({ error: "Войдите в аккаунт для проверки ассистента." }, { status: 401 });
+    const { data: userData, error: authError } = await client.auth.getUser();
+    if (authError || !userData.user) return NextResponse.json({ error: "Войдите в аккаунт для проверки ассистента." }, { status: 401 });
     let payload: unknown;
     try {
-        payload = await request.json();
-    } catch {
-        return NextResponse.json({ error: "Invalid request." }, { status: 400 });
-    }
-
-    if (!payload || typeof payload !== "object") {
-        return NextResponse.json({ error: "Invalid request." }, { status: 400 });
-    }
+        const raw = await request.text();
+        if (raw.length > 16_384) return NextResponse.json({ error: "Сообщение слишком большое." }, { status: 413 });
+        payload = JSON.parse(raw);
+    } catch { return NextResponse.json({ error: "Не удалось прочитать сообщение." }, { status: 400 }); }
+    if (!payload || typeof payload !== "object" || Array.isArray(payload)) return NextResponse.json({ error: "Не удалось прочитать сообщение." }, { status: 400 });
     const body = payload as Record<string, unknown>;
     const message = typeof body.message === "string" ? body.message.trim() : "";
-    const rawContext = body.context;
-    if (!message || message.length > 1200) {
-        return NextResponse.json(
-            { error: "Message must be between 1 and 1,200 characters." },
-            { status: 400 },
-        );
+    if (!message || message.length > 1000) return NextResponse.json({ error: "Напишите сообщение от 1 до 1000 символов." }, { status: 400 });
+    const [{ data: row, error: profileError }, { data: products, error: productsError }] = await Promise.all([
+        client.from("business_profiles").select("profile").eq("owner_id", userData.user.id).maybeSingle(),
+        client.from("catalog_products").select("id,name,price_kzt,description").eq("owner_id", userData.user.id).order("created_at", { ascending: false }).limit(100),
+    ]);
+    if (profileError || productsError) return NextResponse.json({ error: "Не удалось загрузить сохранённые данные бизнеса. Попробуйте позже." }, { status: 503 });
+    const profile = parseBusinessProfile(row?.profile);
+    if (!profile) return NextResponse.json({ error: "Сначала сохраните профиль бизнеса в разделе «Настройки»." }, { status: 409 });
+    const turn = runSalesTurn({ message, profile, products: (products ?? []) as SalesProduct[], state: parseSalesState(body.state) });
+    // This is an owner-only preview: it uses real approved information but creates no customer orders.
+    if (turn.order) {
+        turn.reply = "Тестовая заявка собрана. В Telegram она появится в разделе «Заявки»; этот тест не создаёт настоящую заявку.\n\n" + turn.reply;
+        turn.state.orderId = "test";
     }
-    if (!rawContext || typeof rawContext !== "object") {
-        return NextResponse.json({ error: "Business context is required." }, { status: 400 });
-    }
-
-    const context = rawContext as Record<string, unknown>;
-    if (
-        typeof context.businessName !== "string" ||
-        context.businessName.length > 120 ||
-        typeof context.businessDescription !== "string" ||
-        context.businessDescription.length > 4000 ||
-        !Array.isArray(context.services) ||
-        context.services.length > 30 ||
-        !context.services.every(
-            (service) => typeof service === "string" && service.length <= 180,
-        ) ||
-        (context.tone !== undefined &&
-            (typeof context.tone !== "string" || context.tone.length > 50)) ||
-        (context.language !== undefined &&
-            (typeof context.language !== "string" || context.language.length > 50))
-    ) {
-        return NextResponse.json({ error: "Business context is invalid." }, { status: 400 });
-    }
-
-    const rawProducts = context.products;
-    let products: AssistantProduct[] = [];
-    if (rawProducts !== undefined) {
-        if (
-            !Array.isArray(rawProducts) ||
-            rawProducts.length > 30 ||
-            !rawProducts.every(isAssistantProduct)
-        ) {
-            return NextResponse.json(
-                { error: "Product catalog is invalid." },
-                { status: 400 },
-            );
-        }
-        products = rawProducts.filter(isAssistantProduct);
-    }
-
-    const history = Array.isArray(body.history)
-        ? body.history
-            .filter(
-                (turn): turn is ChatTurn =>
-                    !!turn &&
-                    typeof turn === "object" &&
-                    "role" in turn &&
-                    (turn.role === "user" || turn.role === "assistant") &&
-                    "content" in turn &&
-                    typeof turn.content === "string" &&
-                    turn.content.length <= 1200,
-            )
-            .slice(-12)
-        : [];
-
-    try {
-        const assistantContext: AssistantContext = {
-            businessName: context.businessName,
-            businessDescription: context.businessDescription,
-            services: context.services,
-            products,
-            ...(typeof context.tone === "string" ? { tone: context.tone } : {}),
-            ...(typeof context.language === "string" ? { language: context.language } : {}),
-        };
-        const reply = await generateAIResponse(
-            message,
-            assistantContext,
-            history,
-        );
-        return NextResponse.json({ reply, mode: process.env.USE_MOCK_AI === "false" ? "provider" : "mock" });
-    } catch {
-        return NextResponse.json(
-            { error: "We couldn't get a reply just now. Please try again." },
-            { status: 503 },
-        );
-    }
+    return NextResponse.json({ reply: turn.reply, state: turn.state, preview: true });
 }

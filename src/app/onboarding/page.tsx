@@ -5,7 +5,6 @@ import {
     ArrowRight,
     Bot,
     Check,
-    ChevronRight,
     Globe2,
     MessageCircle,
     Sparkles,
@@ -21,6 +20,7 @@ import {
     extractBusinessDetails,
     useWorkspaceSession,
     writeWorkspace,
+    saveBusinessProfile,
 } from "@/lib/workspace";
 import "../floral-theme.css";
 
@@ -42,26 +42,8 @@ const emptyBusiness: BusinessProfile = {
     language: "Russian",
     tone: "Friendly",
     services: [],
+    acceptOrdersOffline: true,
 };
-const tones = [
-    {
-        name: "Friendly" as const,
-        description: "Warm, helpful and easy to talk to.",
-    },
-    {
-        name: "Professional" as const,
-        description: "Clear, polished and to the point.",
-    },
-    {
-        name: "Premium" as const,
-        description: "Considered service with an elevated feel.",
-    },
-    {
-        name: "Casual" as const,
-        description: "Natural, relaxed and conversational.",
-    },
-];
-
 export default function OnboardingPage() {
     const router = useRouter();
     const { t } = useLanguage();
@@ -72,7 +54,8 @@ export default function OnboardingPage() {
     const business = businessDraft ?? workspace?.business ?? emptyBusiness;
     const [step, setStep] = useState(0);
     const [saved, setSaved] = useState(false);
-    const [widgetEnabled, setWidgetEnabled] = useState(true);
+    const [saving, setSaving] = useState(false);
+    const [saveError, setSaveError] = useState("");
 
     useEffect(() => {
         if (ready && !workspace?.email && !authError) {
@@ -92,10 +75,21 @@ export default function OnboardingPage() {
         setStep((current) => Math.min(current + 1, 4));
     }
 
-    function finish() {
-        if (!workspace) return;
-        writeWorkspace({ ...workspace, business, assistantPublished: false });
-        setSaved(true);
+    async function finish() {
+        if (!workspace || saving) return;
+        setSaving(true);
+        setSaveError("");
+        try {
+            const profile = await saveBusinessProfile({ ...business, language: "Russian", tone: "Friendly", acceptOrdersOffline: true });
+            writeWorkspace({ ...workspace, business: profile, assistantPublished: false });
+            setSaved(true);
+        } catch (error) {
+            setSaveError(error instanceof Error && !(error instanceof TypeError) && !(error instanceof SyntaxError)
+                ? error.message
+                : "Не удалось сохранить бизнес. Проверьте соединение и попробуйте ещё раз.");
+        } finally {
+            setSaving(false);
+        }
     }
 
     if (authError)
@@ -128,18 +122,17 @@ export default function OnboardingPage() {
                     <span>{t("is ready to meet you.")}</span>
                 </h1>
                 <p>
-                    {t("We’ve created a first version for")} {business.name || t("your business")}.
-                    {" "}{t("You can teach it more and test a conversation in your workspace.")}
+                    Профиль {business.name || t("your business")} сохранён. Добавьте товары в каталог, проверьте ответы ассистента и подключите Telegram в кабинете.
                 </p>
                 <div className="success-checklist">
                     <span>
-                        <Check size={14} /> {t("Business profile saved")}
+                        <Check size={14} /> Профиль бизнеса сохранён в аккаунте
                     </span>
                     <span>
-                        <Check size={14} />                         {t("Assistant style set to")} {t(business.tone)}
+                        <Check size={14} /> Ассистент общается на русском
                     </span>
                     <span>
-                        <Check size={14} /> {t("Demo chat ready to test")}
+                        <Check size={14} /> Тестовый чат готов к проверке
                     </span>
                 </div>
                 <button
@@ -159,7 +152,7 @@ export default function OnboardingPage() {
                 <div className="demo-disclosure">
                     <Sparkles size={14} />
                     <span>
-                        {t("Demo workspace only. Your profile is saved in this browser; publishing and external channels are not connected.")}
+                        Telegram настраивается в разделе «Каналы». Тестовый чат в кабинете помогает проверить ответы и не создаёт заявки.
                     </span>
                 </div>
             </main>
@@ -358,48 +351,19 @@ export default function OnboardingPage() {
                     {step === 2 && (
                         <form className="setup-form" onSubmit={next}>
                             <div className="step-eyebrow">
-                                {t("STEP 03")} <i /> {t("A LITTLE PERSONALITY")}
+                                {t("STEP 03")} <i /> ОБЩЕНИЕ С КЛИЕНТАМИ
                             </div>
                             <h1>
-                                {t("How should your assistant sound?")}
+                                Как работает ваш ассистент
                             </h1>
                             <p>
-                                {t("Pick the style that feels most like your business. You can change this later.")}
+                                Ассистент общается на русском: узнаёт повод и бюджет, предлагает товары из каталога и уточняет пожелания клиента.
                             </p>
                             <div className="tone-options">
-                                {tones.map((tone) => (
-                                    <button
-                                        type="button"
-                                        key={tone.name}
-                                        className={`tone-option ${business.tone === tone.name ? "selected" : ""}`}
-                                        onClick={() => update("tone", tone.name)}
-                                    >
-                                        <span className="tone-option-radio">
-                                            {business.tone === tone.name && <i />}
-                                        </span>
-                                        <span>
-                                            <b>{t(tone.name)}</b>
-                                            <small>{t(tone.description)}</small>
-                                        </span>
-                                        <ChevronRight size={15} />
-                                    </button>
-                                ))}
+                                <div className="tone-option" style={{ cursor: "default" }}><span style={{ display: "grid", gap: 4 }}><b>Знает ваш бизнес</b><small>Использует сохранённый профиль, услуги и правила доставки.</small></span></div>
+                                <div className="tone-option" style={{ cursor: "default" }}><span style={{ display: "grid", gap: 4 }}><b>Помогает выбрать букет</b><small>Предлагает товары и цены из вашего каталога.</small></span></div>
+                                <div className="tone-option" style={{ cursor: "default" }}><span style={{ display: "grid", gap: 4 }}><b>Собирает заявки круглосуточно</b><small>Уточняет имя, телефон, адрес и время доставки. Вы проверите и подтвердите заявку позже.</small></span></div>
                             </div>
-                            <label htmlFor="language">{t("Main conversation language")}</label>
-                            <select
-                                id="language"
-                                value={business.language}
-                                onChange={(event) =>
-                                    update(
-                                        "language",
-                                        event.target.value as BusinessProfile["language"],
-                                    )
-                                }
-                            >
-                                <option value="English">{t("English")}</option>
-                                <option value="Russian">{t("Russian")}</option>
-                                <option value="Kazakh">{t("Kazakh")}</option>
-                            </select>
                             <div className="setup-actions">
                                 <button
                                     className="back-step"
@@ -424,29 +388,27 @@ export default function OnboardingPage() {
                                 <br />
                                 {t("where they are.")}
                             </h1>
-                            <p>{t("Choose a starting point. You can add more channels anytime.")}</p>
+                            <p>После сохранения бизнеса подключите Telegram в разделе «Каналы». Проверить ответы можно в тестовом чате кабинета.</p>
                             <div className="channel-option channel-active">
                                 <span className="channel-icon channel-web">
                                     <Globe2 size={17} />
                                 </span>
                                 <span>
-                                    <b>{t("Website chat")}</b>
-                                    <small>{t("A chat widget for your website")}</small>
+                                    <b>Тестовый чат в кабинете</b>
+                                    <small>Проверка ответов ассистента без создания заявок</small>
                                 </span>
-                                <span className="channel-toggle">
-                                    <i />
-                                </span>
+                                <span className="coming-soon">ДОСТУПЕН</span>
                             </div>
                             {["WhatsApp", "Instagram", "Telegram"].map((channel) => (
-                                <div className="channel-option channel-disabled" key={channel}>
+                                <div className={`channel-option ${channel === "Telegram" ? "" : "channel-disabled"}`} key={channel}>
                                     <span className="channel-icon channel-placeholder">
                                         <MessageCircle size={16} />
                                     </span>
                                     <span>
                                         <b>{channel}</b>
-                                        <small>{t("External connection not configured")}</small>
+                                        <small>{channel === "Telegram" ? "Подключите в разделе «Каналы» после сохранения бизнеса" : t("External connection not configured")}</small>
                                     </span>
-                                    <span className="coming-soon">{t("COMING SOON")}</span>
+                                    <span className="coming-soon">{channel === "Telegram" ? "В КАБИНЕТЕ" : t("COMING SOON")}</span>
                                 </div>
                             ))}
                             <div className="setup-actions">
@@ -476,8 +438,9 @@ export default function OnboardingPage() {
                                 {t("One last look.")}
                                 <br />{t("Then say hello.")}
                             </h1>
+                            {saveError && <p className="auth-error" role="alert">{saveError}</p>}
                             <p>
-                                {t("Your assistant starts in draft mode. You can test it before anything goes live.")}
+                                Сохраните профиль в аккаунте, затем добавьте каталог и подключите Telegram. Тестовый чат не создаёт заявки.
                             </p>
                             <div className="review-card">
                                 <div className="review-card-head">
@@ -488,13 +451,13 @@ export default function OnboardingPage() {
                                         <b>{business.name || t("Your business")}</b>
                                         <small>{t(business.category)}</small>
                                     </div>
-                                    <span className="draft-pill">{t("DRAFT")}</span>
+                                    <span className="draft-pill">ПРОФИЛЬ</span>
                                 </div>
                                 <div className="review-divider" />
                                 <div className="review-row">
                                     <span>{t("Personality")}</span>
                                     <b>
-                                        {t(business.tone)} · {t(business.language)}
+                                        Дружелюбно · Русский
                                     </b>
                                 </div>
                                 <div className="review-row">
@@ -503,19 +466,12 @@ export default function OnboardingPage() {
                                 </div>
                                 <div className="review-row">
                                     <span>{t("Website widget")}</span>
-                                    <button
-                                        className={`small-switch ${widgetEnabled ? "on" : ""}`}
-                                        aria-label={t("Toggle website chat")}
-                                        type="button"
-                                        onClick={() => setWidgetEnabled((enabled) => !enabled)}
-                                    >
-                                        <i />
-                                    </button>
+                                    <b>Только предпросмотр</b>
                                 </div>
                                 <div className="review-note">
                                     <Sparkles size={14} />
                                     <span>
-                                        {t("Nothing is published. Your assistant is private until you choose otherwise.")}
+                                        Заявки принимаются в подключённом Telegram-боте. Виджет для других сайтов пока доступен только для предпросмотра.
                                     </span>
                                 </div>
                             </div>
@@ -531,8 +487,9 @@ export default function OnboardingPage() {
                                     className="button button-blue"
                                     type="button"
                                     onClick={finish}
+                                    disabled={saving}
                                 >
-                                    {t("Create my AI")} <ArrowRight size={15} />
+                                    {saving ? "Сохраняем бизнес…" : "Сохранить профиль бизнеса"} <ArrowRight size={15} />
                                 </button>
                             </div>
                         </div>
@@ -543,7 +500,7 @@ export default function OnboardingPage() {
                 <span>
                     <MessageCircle size={13} /> {t("Need a hand?")} hello@floralai.example
                 </span>
-                <span>{t("DEMO SETUP · NOTHING PUBLISHED")}</span>
+                <span>НАСТРОЙКА ПРОФИЛЯ БИЗНЕСА</span>
             </footer>
         </main>
     );

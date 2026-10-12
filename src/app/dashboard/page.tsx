@@ -29,28 +29,32 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, useEffect, useState, useSyncExternalStore } from "react";
+import { FormEvent, useState, useSyncExternalStore } from "react";
 import { useLanguage } from "@/components/language-provider";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import {
-    BusinessProfile,
     clearWorkspace,
     DemoWorkspace,
     useWorkspaceSession,
     writeWorkspace,
+    saveBusinessProfile,
 } from "@/lib/workspace";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
-import type { AssistantProduct } from "@/lib/catalog";
 import { ProductCatalog } from "@/components/product-catalog";
 import { TelegramChannel } from "@/components/telegram-channel";
+import { BusinessProfileEditor } from "@/components/business-profile-editor";
+import { SalesOrders } from "@/components/sales-orders";
+import { emptySalesState, type SalesState } from "@/lib/sales-assistant";
 import type { ChatTurn } from "@/lib/ai";
 import "../floral-theme.css";
+import "../business-tools.css";
 
 type View =
     | "overview"
     | "assistant"
     | "conversations"
     | "leads"
+    | "orders"
     | "knowledge"
     | "catalog"
     | "analytics"
@@ -77,6 +81,7 @@ const navigation: {
             group: "WORKSPACE",
         },
         { id: "leads", label: "Leads", icon: Users, group: "WORKSPACE" },
+        { id: "orders", label: "Заявки", icon: CalendarDays, group: "WORKSPACE" },
         { id: "catalog", label: "Product catalog", icon: Flower2, group: "BUILD" },
         {
             id: "knowledge",
@@ -114,44 +119,20 @@ function getServerDashboardView(): View {
 }
 
 function TestChat({ workspace }: { workspace: DemoWorkspace }) {
-    const { locale, t } = useLanguage();
+    const { t } = useLanguage();
     const business = workspace.business;
     const [history, setHistory] = useState<ChatTurn[]>([]);
     const [input, setInput] = useState("");
     const [busy, setBusy] = useState(false);
-    const [error, setError] = useState(false);
-    const [catalogError, setCatalogError] = useState("");
-    const [products, setProducts] = useState<AssistantProduct[]>([]);
-
-    useEffect(() => {
-        let cancelled = false;
-        async function loadProducts() {
-            const client = createSupabaseBrowserClient();
-            if (!client) return;
-            const { data, error: catalogError } = await client
-                .from("catalog_products")
-                .select("name, price_kzt, description")
-                .order("created_at", { ascending: false })
-                .limit(30);
-            if (catalogError) {
-                console.error("Unable to load products for the assistant test.", catalogError);
-                if (!cancelled) setCatalogError("Could not load catalog products.");
-                return;
-            }
-            if (!cancelled) setProducts((data ?? []) as AssistantProduct[]);
-        }
-        void loadProducts();
-        return () => {
-            cancelled = true;
-        };
-    }, []);
+    const [error, setError] = useState("");
+    const [salesState, setSalesState] = useState<SalesState>(emptySalesState);
 
     async function send(event?: FormEvent, suggestion?: string) {
         event?.preventDefault();
         const message = (suggestion ?? input).trim();
         if (!message || !business || busy) return;
         setInput("");
-        setError(false);
+        setError("");
         setHistory((current) => [...current, { role: "user", content: message }]);
         setBusy(true);
         try {
@@ -160,25 +141,19 @@ function TestChat({ workspace }: { workspace: DemoWorkspace }) {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     message,
-                    history: history.slice(-10),
-                    context: {
-                        businessName: business.name,
-                        businessDescription: business.description,
-                        services: business.services,
-                        tone: business.tone,
-                        language: locale === "ru" ? "Russian" : locale === "kk" ? "Kazakh" : "English",
-                        products,
-                    },
+                    state: salesState,
                 }),
             });
-            const result = (await response.json()) as { reply?: string };
-            if (!response.ok || !result.reply) throw new Error("Request failed");
+            const result = (await response.json()) as { reply?: string; state?: SalesState; error?: string };
+            if (!response.ok || !result.reply) throw new Error(result.error ?? "Не удалось получить ответ.");
+            if (result.state) setSalesState(result.state);
             setHistory((current) => [
                 ...current,
                 { role: "assistant", content: result.reply! },
             ]);
-        } catch {
-            setError(true);
+        } catch (error) {
+            setError(error instanceof Error && !(error instanceof TypeError)
+                ? error.message : "Не удалось получить ответ. Проверьте соединение и попробуйте снова.");
         } finally {
             setBusy(false);
         }
@@ -199,11 +174,6 @@ function TestChat({ workspace }: { workspace: DemoWorkspace }) {
                 <span className="test-label">{t("TEST MODE")}</span>
             </div>
             <div className="test-chat-messages">
-                {catalogError && (
-                    <div className="test-error" role="alert">
-                        {t(catalogError)}
-                    </div>
-                )}
                 <div className="test-message assistant-message">
                     {t("Hi, I’m your friendly assistant")} {t("for")}{" "}
                     {business?.name || t("your business")}.{" "}
@@ -226,7 +196,7 @@ function TestChat({ workspace }: { workspace: DemoWorkspace }) {
                 )}
                 {error && (
                     <div className="test-error" role="alert">
-                        {t("Something went wrong.")}{" "}
+                        {error}{" "}
                         <button
                             type="button"
                             onClick={() => send(undefined, history.at(-1)?.content)}
@@ -238,9 +208,9 @@ function TestChat({ workspace }: { workspace: DemoWorkspace }) {
             </div>
             <div className="test-suggestions">
                 {[
-                    "How much does it cost?",
-                    "What are your hours?",
-                    "I’d like to book",
+                    "Показать каталог",
+                    "Какие часы работы?",
+                    "Хочу заказать букет",
                 ].map((item) => (
                     <button
                         key={item}
@@ -257,6 +227,7 @@ function TestChat({ workspace }: { workspace: DemoWorkspace }) {
                     value={input}
                     onChange={(event) => setInput(event.target.value)}
                     placeholder={t("Ask about your business...")}
+                    maxLength={1000}
                     aria-label={t("Test your assistant")}
                 />
                 <button
@@ -310,7 +281,7 @@ export default function DashboardPage() {
     const { locale, t } = useLanguage();
     const numberLocale =
         locale === "ru" ? "ru-RU" : locale === "kk" ? "kk-KZ" : "en-US";
-    const { ready, workspace, authError } = useWorkspaceSession();
+    const { ready, workspace, authError, profileSyncError } = useWorkspaceSession();
     const view = useSyncExternalStore(
         subscribeToDashboardView,
         getDashboardView,
@@ -320,6 +291,7 @@ export default function DashboardPage() {
     const [knowledgeText, setKnowledgeText] = useState("");
     const [addingKnowledge, setAddingKnowledge] = useState(false);
     const [notice, setNotice] = useState("");
+    const [knowledgeSaving, setKnowledgeSaving] = useState(false);
 
     function selectView(next: View) {
         setMobileNav(false);
@@ -327,27 +299,16 @@ export default function DashboardPage() {
         window.dispatchEvent(new Event("bizai:viewchange"));
     }
 
-    function saveKnowledge() {
-        if (!workspace?.business) return;
-        const updated = {
-            ...workspace,
-            business: { ...workspace.business, description: knowledgeText },
-        };
-        writeWorkspace(updated);
-        setAddingKnowledge(false);
-        setNotice("Business knowledge saved in this browser.");
-        window.setTimeout(() => setNotice(""), 2600);
-    }
-
-    function updateBusiness<K extends keyof BusinessProfile>(
-        key: K,
-        value: BusinessProfile[K],
-    ) {
-        if (!workspace?.business) return;
-        writeWorkspace({
-            ...workspace,
-            business: { ...workspace.business, [key]: value },
-        });
+    async function saveKnowledge() {
+        if (!workspace?.business || knowledgeSaving) return;
+        setKnowledgeSaving(true);
+        try {
+            await saveBusinessProfile({ ...workspace.business, description: knowledgeText });
+            setAddingKnowledge(false);
+            setNotice("Информация сохранена в аккаунте и доступна Telegram-боту.");
+        } catch (error) {
+            setNotice(error instanceof Error ? error.message : "Не удалось сохранить информацию.");
+        } finally { setKnowledgeSaving(false); }
     }
 
     async function signOut() {
@@ -498,12 +459,12 @@ export default function DashboardPage() {
                     <div className="breadcrumb">
                         <span>{t("Workspace")}</span>
                         <i>/</i>
-                        <b>{active.label}</b>
+                        <b>{t(active.label)}</b>
                     </div>
                     <div className="topbar-actions">
                         <LanguageSwitcher />
                         <span className="preview-pill">
-                            <i /> {t("DEMO MODE")}
+                            <i /> Рабочий кабинет
                         </span>
                         <button
                             className="topbar-help"
@@ -557,6 +518,8 @@ export default function DashboardPage() {
                                     <Check size={14} /> {t(notice)}
                                 </div>
                             )}
+                            {profileSyncError && <p className="auth-error" role="alert">{profileSyncError} Проверьте сохранение в разделе «Настройки».</p>}
+                            {view === "orders" && <SalesOrders />}
                             {view === "overview" && (
                                 <>
                                     <div className="dashboard-page-heading">
@@ -587,7 +550,7 @@ export default function DashboardPage() {
                                             <div>
                                                 <b>{business.name} {t("assistant")}</b>
                                                 <span>
-                                                    <i className="status-dot" /> {t("Ready to test · not published")}
+                                                    <i className="status-dot" /> Готов к проверке · Telegram в разделе «Каналы»
                                                 </span>
                                             </div>
                                         </div>
@@ -620,7 +583,7 @@ export default function DashboardPage() {
                                         ].map(({ label, value, icon: Icon }) => (
                                             <article className="metric-card" key={label}>
                                                 <div>
-                                                    <span>{label}</span>
+                                                    <span>{t(label)}</span>
                                                     <Icon size={16} />
                                                 </div>
                                                 <strong>{value}</strong>
@@ -651,7 +614,7 @@ export default function DashboardPage() {
                                                     <Activity size={18} />
                                                 </span>
                                                 <b>{t("Your chart starts with your first conversation.")}</b>
-                                                <small>{t("No activity is tracked in demo mode.")}</small>
+                                                <small>Статистика пока не подключена. Заявки доступны в разделе «Заявки».</small>
                                             </div>
                                             <div className="chart-days">
                                                 <span>{t("MON")}</span>
@@ -724,7 +687,7 @@ export default function DashboardPage() {
                                                         <span>
                                                             <Icon size={15} />
                                                         </span>
-                                                        {label}
+                                                        {t(label)}
                                                         <ArrowRight size={13} />
                                                     </button>
                                                 ))}
@@ -741,20 +704,20 @@ export default function DashboardPage() {
                                             <div className="eyebrow">{t("PRIVATE TEST SPACE")}</div>
                                             <h1>{t("Meet your assistant.")}</h1>
                                             <p>
-                                                {t("Try a few questions before you decide what to change.")}
+                                                Проверьте подбор товаров и сбор контактов. Тестовый чат не создаёт заявки; заявки клиентов сохраняются через подключённый Telegram-бот.
                                             </p>
                                         </div>
                                         <span className="draft-status">
-                                            <i /> {t("DRAFT · NOT PUBLISHED")}
+                                            <i /> Тест без создания заявок
                                         </span>
                                     </div>
                                     <div className="assistant-builder-grid">
                                         <section className="dashboard-panel assistant-settings-panel">
                                             <div className="panel-heading">
                                                 <div>
-                                                    <h2>{t("How should your AI behave?")}</h2>
+                                                    <h2>Как работает ваш ассистент</h2>
                                                     <p>
-                                                        {t("Only uses the approved details in your business profile.")}
+                                                        Использует сохранённый профиль бизнеса и товары из каталога.
                                                     </p>
                                                 </div>
                                             </div>
@@ -765,35 +728,9 @@ export default function DashboardPage() {
                                                 className="dashboard-input"
                                                 id="assistant-name"
                                                 defaultValue={`${business.name} ${t("assistant")}`}
+                                                readOnly
                                             />
-                                            <label className="field-label" htmlFor="assistant-tone">
-                                                {t("Tone of voice")}
-                                            </label>
-                                            <select
-                                                className="dashboard-input"
-                                                id="assistant-tone"
-                                                defaultValue={business.tone}
-                                            >
-                                                <option value="Friendly">{t("Friendly")}</option>
-                                                <option value="Professional">{t("Professional")}</option>
-                                                <option value="Premium">{t("Premium")}</option>
-                                                <option value="Casual">{t("Casual")}</option>
-                                            </select>
-                                            <label
-                                                className="field-label"
-                                                htmlFor="assistant-language"
-                                            >
-                                                {t("Language")}
-                                            </label>
-                                            <select
-                                                className="dashboard-input"
-                                                id="assistant-language"
-                                                defaultValue={business.language}
-                                            >
-                                                <option value="English">{t("English")}</option>
-                                                <option value="Russian">{t("Russian")}</option>
-                                                <option value="Kazakh">{t("Kazakh")}</option>
-                                            </select>
+                                            <p className="field-label">Ассистент общается на русском: уточняет повод и бюджет, помогает выбрать букет и собирает контакты.</p>
                                             <div className="guardrail-note">
                                                 <BadgeCheck size={15} />
                                                 <span>
@@ -937,7 +874,7 @@ export default function DashboardPage() {
                                         </span>
                                         <div>
                                             <b>{business.name}</b>
-                                            <span>{t("Business profile · Edited in this browser")}</span>
+                                            <span>Профиль бизнеса · сохранён в аккаунте</span>
                                         </div>
                                         <span className="knowledge-ready">
                                             <Check size={12} /> {t("APPROVED")}
@@ -948,7 +885,7 @@ export default function DashboardPage() {
                                             <div>
                                                 <h2>{t("About your business")}</h2>
                                                 <p>
-                                                    {t("This information is available to your assistant in test mode.")}
+                                                    После сохранения эта информация доступна Telegram-боту и тестовому чату.
                                                 </p>
                                             </div>
                                             <button
@@ -980,6 +917,7 @@ export default function DashboardPage() {
                                                     <button
                                                         type="button"
                                                         onClick={saveKnowledge}
+                                                        disabled={knowledgeSaving}
                                                         className="button button-blue"
                                                     >
                                                         {t("Save information")} <Check size={14} />
@@ -997,7 +935,7 @@ export default function DashboardPage() {
                                             <span>
                                                 <BadgeCheck size={14} /> {t("Uses approved business information only")}
                                             </span>
-                                            <span>{t("Updated in this browser")}</span>
+                                            <span>Данные сохранённого профиля</span>
                                         </div>
                                     </div>
                                     <div className="knowledge-categories">
@@ -1132,7 +1070,7 @@ export default function DashboardPage() {
                                                     disabled={state !== "AVAILABLE TO PREVIEW"}
                                                     onClick={() =>
                                                         setNotice(
-                                                            "Widget settings are in preview; website embedding is not active yet.",
+                                                            "Виджет доступен для предпросмотра. Встраивание на другие сайты пока не подключено.",
                                                         )
                                                     }
                                                 >
@@ -1145,7 +1083,7 @@ export default function DashboardPage() {
                                         businessName={business?.name ?? ""}
                                     />
                                     <div className="integration-disclosure">
-                                        <Sparkles size={15} /> {t("Telegram is the free shared channel. WhatsApp and other channels need separate provider setup.")}
+                                        <Sparkles size={15} /> Telegram-бот сохраняет заявки клиентов в кабинете. WhatsApp и другие каналы пока не подключены.
                                     </div>
                                 </>
                             )}
@@ -1162,82 +1100,14 @@ export default function DashboardPage() {
                                                 {t("Manage your business profile and assistant preferences.")}
                                             </p>
                                         </div>
-                                        <button
-                                            type="button"
-                                            className="button button-blue"
-                                            onClick={() =>
-                                                setNotice(
-                                                    t("Settings are saved automatically in this browser."),
-                                                )
-                                            }
-                                        >
-                                            <Check size={14} /> {t("Save changes")}
-                                        </button>
                                     </div>
-                                    <section className="dashboard-panel settings-panel">
-                                        <div className="panel-heading">
-                                            <div>
-                                                <h2>{t("Business profile")}</h2>
-                                                <p>
-                                                    {t("Shown to your assistant as approved business information.")}
-                                                </p>
-                                            </div>
-                                        </div>
-                                        <div className="settings-fields">
-                                            <label>
-                                                {t("Business name")}
-                                                <input
-                                                    className="dashboard-input"
-                                                    value={business.name}
-                                                    onChange={(event) =>
-                                                        updateBusiness("name", event.target.value)
-                                                    }
-                                                />
-                                            </label>
-                                            <label>
-                                                {t("Business type")}
-                                                <select
-                                                    className="dashboard-input"
-                                                    value={business.category}
-                                                    onChange={(event) =>
-                                                        updateBusiness(
-                                                            "category",
-                                                            event.target.value as BusinessProfile["category"],
-                                                        )
-                                                    }
-                                                >
-                                                    <option value="Beauty & wellness">{t("Beauty & wellness")}</option>
-                                                    <option value="Food & hospitality">{t("Food & hospitality")}</option>
-                                                    <option value="Health & clinics">{t("Health & clinics")}</option>
-                                                    <option value="Retail & online shop">{t("Retail & online shop")}</option>
-                                                    <option value="Auto & home services">{t("Auto & home services")}</option>
-                                                    <option value="Other">{t("Other")}</option>
-                                                </select>
-                                            </label>
-                                            <label>
-                                                {t("Location")}
-                                                <input
-                                                    className="dashboard-input"
-                                                    value={business.location}
-                                                    placeholder={t("City or address")}
-                                                    onChange={(event) =>
-                                                        updateBusiness("location", event.target.value)
-                                                    }
-                                                />
-                                            </label>
-                                            <label>
-                                                {t("Opening hours")}
-                                                <input
-                                                    className="dashboard-input"
-                                                    value={business.hours}
-                                                    placeholder={t("e.g. Mon–Sat, 10:00–20:00")}
-                                                    onChange={(event) =>
-                                                        updateBusiness("hours", event.target.value)
-                                                    }
-                                                />
-                                            </label>
-                                        </div>
-                                    </section>
+                                    <BusinessProfileEditor
+                                        profile={business}
+                                        onSaved={(profile) => {
+                                            if (workspace) writeWorkspace({ ...workspace, business: profile });
+                                            setNotice("Профиль бизнеса сохранён в аккаунте.");
+                                        }}
+                                    />
                                     <section className="dashboard-panel settings-panel">
                                         <div className="panel-heading">
                                             <div>
@@ -1256,7 +1126,7 @@ export default function DashboardPage() {
                                         <EmptyState
                                             icon={Users}
                                             title="Just you for now"
-                                            copy="Team invitations require account authentication, which is not configured in this local preview."
+                                            copy="Приглашения сотрудников пока недоступны."
                                         />
                                     </section>
                                 </>
@@ -1293,7 +1163,7 @@ export default function DashboardPage() {
                                                 <i />
                                             </div>
                                             <small>
-                                                {t("No live conversations counted in this browser preview.")}
+                                                Статистика использования тарифа пока недоступна.
                                             </small>
                                         </div>
                                         <button

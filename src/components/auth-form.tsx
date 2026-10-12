@@ -343,7 +343,7 @@ export function AuthForm({
                 <div className="demo-disclosure">
                     <Sparkles size={14} />
                     <span>{authConfigured
-                        ? t("Business profile data remains in this browser preview; account authentication is handled by Supabase.")
+                        ? t("After saving, your business profile is stored in your account and available to your assistant.")
                         : t("This is a local product preview. Account details stay in this browser; server authentication is not configured.")}
                     </span>
                 </div>

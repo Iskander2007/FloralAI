@@ -1,25 +1,7 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
-
-export type BusinessCategory =
-    | "Beauty & wellness"
-    | "Food & hospitality"
-    | "Health & clinics"
-    | "Retail & online shop"
-    | "Auto & home services"
-    | "Other";
-
-export type BusinessProfile = {
-    name: string;
-    category: BusinessCategory;
-    description: string;
-    location: string;
-    hours: string;
-    phone: string;
-    language: "English" | "Russian" | "Kazakh";
-    tone: "Friendly" | "Professional" | "Premium" | "Casual";
-    services: string[];
-};
+import type { BusinessProfile } from "@/lib/business";
+export type { BusinessProfile, BusinessCategory } from "@/lib/business";
 
 export type DemoWorkspace = {
     email: string;
@@ -71,6 +53,7 @@ export function useWorkspaceSession() {
     const [authState, setAuthState] = useState<{
         ready: boolean;
         error: string | null;
+        profileError?: string;
     }>(() =>
         createSupabaseBrowserClient()
             ? { ready: false, error: null }
@@ -82,7 +65,7 @@ export function useWorkspaceSession() {
         if (!supabase) return;
 
         let cancelled = false;
-        void supabase.auth.getUser().then(({ data, error }) => {
+        void supabase.auth.getUser().then(async ({ data, error }) => {
             if (cancelled) return;
             if (error) {
                 setAuthState({ ready: true, error: error.message });
@@ -94,14 +77,33 @@ export function useWorkspaceSession() {
                 const existing = readWorkspace();
                 const sameAccount =
                     existing?.email.toLowerCase() === email.toLowerCase();
+                let storedBusiness: BusinessProfile | null = null;
+                let profileError: string | undefined;
+                try {
+                    const response = await fetch("/api/business-profile", { cache: "no-store" });
+                    const result = await response.json() as { profile?: BusinessProfile | null; error?: string };
+                    if (!response.ok) throw new Error(result.error ?? "Не удалось загрузить профиль бизнеса.");
+                    storedBusiness = result.profile ?? null;
+                    // Move an existing account's browser draft into its server profile once.
+                    if (!storedBusiness && sameAccount && existing?.business) {
+                        storedBusiness = await saveBusinessProfile(existing.business);
+                    }
+                } catch (loadError) {
+                    profileError = loadError instanceof Error && !(loadError instanceof TypeError)
+                        ? loadError.message : "Не удалось загрузить профиль бизнеса. Проверьте соединение и обновите страницу.";
+                }
+                if (cancelled) return;
                 writeWorkspace({
                     email,
-                    business: sameAccount ? existing?.business ?? null : null,
+                    business: storedBusiness ?? (sameAccount ? existing?.business ?? null : null),
                     assistantPublished: sameAccount
                         ? existing?.assistantPublished ?? false
                         : false,
                 });
+                setAuthState({ ready: true, error: null, profileError });
+                return;
             }
+            clearWorkspace();
             setAuthState({ ready: true, error: null });
         }).catch((error: unknown) => {
             if (cancelled) return;
@@ -109,7 +111,7 @@ export function useWorkspaceSession() {
                 ready: true,
                 error: error instanceof Error
                     ? error.message
-                    : "Unable to verify your account session.",
+                    : "Не удалось проверить вход в аккаунт.",
             });
         });
 
@@ -122,7 +124,25 @@ export function useWorkspaceSession() {
         ready: local.ready && authState.ready,
         workspace: local.workspace,
         authError: authState.error,
+        profileSyncError: authState.profileError ?? null,
     };
+}
+
+export async function saveBusinessProfile(profile: BusinessProfile): Promise<BusinessProfile> {
+    let response: Response;
+    try {
+        response = await fetch("/api/business-profile", {
+            method: "PUT", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ profile }),
+        });
+    } catch {
+        throw new Error("Не удалось сохранить данные. Проверьте соединение и попробуйте снова.");
+    }
+    const result = await response.json() as { profile?: BusinessProfile; error?: string };
+    if (!response.ok || !result.profile) throw new Error(result.error ?? "Не удалось сохранить профиль бизнеса.");
+    const workspace = readWorkspace();
+    if (workspace) writeWorkspace({ ...workspace, business: result.profile });
+    return result.profile;
 }
 
 function notifyWorkspaceChange() {
