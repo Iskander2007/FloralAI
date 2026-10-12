@@ -26,6 +26,7 @@ const { emptySalesState, runSalesTurn } = await import(salesUrl);
 const originalFetch = globalThis.fetch;
 const originalToken = process.env.TELEGRAM_BOT_TOKEN;
 const originalSecret = process.env.TELEGRAM_WEBHOOK_SECRET;
+const originalSupabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 
 const owner = "10000000-0000-4000-8000-000000000001";
 const businessId = "20000000-0000-4000-8000-000000000001";
@@ -37,7 +38,7 @@ const profile = {
 };
 
 function installContext({ rows = {}, commit, user = { id: owner } } = {}) {
-    const context = { sends: [], queries: [], commits: [], updates: [], rows };
+    const context = { sends: [], media: [], queries: [], commits: [], updates: [], rows };
     context.admin = {
         auth: { getUser: async () => ({ data: { user }, error: null }) },
         from(table) {
@@ -86,8 +87,9 @@ function installContext({ rows = {}, commit, user = { id: owner } } = {}) {
     };
     globalThis.__floralBackendTest = context;
     globalThis.fetch = async (url, options) => {
-        assert.match(String(url), /^https:\/\/api\.telegram\.org\/botunit-test-token\/sendMessage$/);
-        context.sends.push(JSON.parse(options.body));
+        assert.match(String(url), /^https:\/\/api\.telegram\.org\/botunit-test-token\/(sendMessage|sendPhoto|sendMediaGroup)$/);
+        if (String(url).endsWith("/sendMessage")) context.sends.push(JSON.parse(options.body));
+        else context.media.push({ method: String(url).split("/").at(-1), body: JSON.parse(options.body) });
         return Response.json({ ok: true });
     };
     return context;
@@ -109,15 +111,87 @@ function businessRows(state = emptySalesState()) {
     };
 }
 
+function photoRows(count = 1) {
+    const rows = businessRows();
+    rows.catalog_products = Array.from({ length: count }, (_, index) => ({ ...product, id: `30000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`, owner_id: owner, name: `Букет ${index + 1}`, price_kzt: (index + 1) * 1000, image_path: `${owner}/40000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}.jpg` }));
+    return rows;
+}
+
+test("sends a catalog photo with price only after its snapshot has committed", async () => {
+    const context = installContext({ rows: photoRows(), commit: (args, current) => {
+        assert.equal(current.media.length, 0);
+        assert.equal(args.p_state.telegramCatalog.length, 1);
+        return { data: { outcome: "committed", reply: args.p_reply }, error: null };
+    } });
+    assert.equal((await webhook.POST(request("/catalog"))).status, 200);
+    assert.equal(context.media[0].method, "sendPhoto");
+    assert.equal(context.media[0].body.chat_id, 555);
+    assert.match(context.media[0].body.photo, /\/storage\/v1\/object\/public\/product-images\//);
+    assert.match(context.media[0].body.caption, /1\. Букет 1 — 1\s000 ₸/);
+    assert.equal(context.sends.length, 1);
+});
+
+test("sends only the requested page as an album and excludes another owner's image path", async () => {
+    const rows = photoRows(12);
+    rows.catalog_products[8].image_path = `99999999-0000-4000-8000-000000000000/40000000-0000-4000-8000-000000000001.jpg`;
+    const context = installContext({ rows, commit: (args) => ({ data: { outcome: "committed", reply: args.p_reply }, error: null }) });
+    assert.equal((await webhook.POST(request("/catalog 2"))).status, 200);
+    assert.equal(context.media[0].method, "sendMediaGroup");
+    assert.equal(context.media[0].body.media.length, 3);
+    assert.match(context.media[0].body.media[0].caption, /^10\. Букет 10/);
+    assert.match(context.media[0].body.media[2].caption, /^12\. Букет 12/);
+});
+
+test("a duplicate replays the committed photo and price without reading a changed catalog", async () => {
+    const rows = photoRows();
+    const originalPhoto = { photo: `https://unit-test.supabase.co/storage/v1/object/public/product-images/${owner}/40000000-0000-4000-8000-000000000001.jpg`, caption: "1. Розы — 12 000 ₸" };
+    rows.telegram_chats[0].state = { ...emptySalesState(), telegramCatalog: [originalPhoto] };
+    const context = installContext({ rows });
+    assert.equal((await webhook.POST(request("/catalog", 11))).status, 200);
+    assert.deepEqual(context.media[0].body, { chat_id: 555, ...originalPhoto });
+    assert.equal(context.queries.some(({ table }) => table === "catalog_products"), false);
+    assert.equal(context.commits.length, 0);
+});
+
+test("missing photos keep the text catalog, and a permanent photo error does not block checkout", async () => {
+    const missing = installContext({ rows: businessRows(), commit: (args) => ({ data: { outcome: "committed", reply: args.p_reply }, error: null }) });
+    assert.equal((await webhook.POST(request("/catalog"))).status, 200);
+    assert.equal(missing.media.length, 0);
+    assert.match(missing.sends[0].text, /Розы/);
+    const context = installContext({ rows: photoRows(), commit: (args) => ({ data: { outcome: "committed", reply: args.p_reply }, error: null }) });
+    const mockedFetch = globalThis.fetch;
+    globalThis.fetch = async (url, options) => String(url).endsWith("/sendPhoto") ? Response.json({ ok: false }, { status: 400 }) : mockedFetch(url, options);
+    assert.equal((await webhook.POST(request("/catalog"))).status, 200);
+    assert.match(context.sends[0].text, /Фото сейчас недоступны/);
+    assert.equal(context.commits.length, 1);
+});
+
+test("transient photo delivery failure requests retry and never commits a second turn", async () => {
+    const context = installContext({ rows: photoRows(), commit: (args, current) => {
+        current.rows.telegram_chats[0] = { ...current.rows.telegram_chats[0], last_update_id: args.p_update_id, last_reply: args.p_reply, state: args.p_state };
+        return { data: { outcome: "committed", reply: args.p_reply }, error: null };
+    } });
+    const mockedFetch = globalThis.fetch;
+    globalThis.fetch = async () => Response.json({ ok: false }, { status: 503 });
+    assert.equal((await webhook.POST(request("/catalog"))).status, 503);
+    assert.equal(context.commits.length, 1);
+    globalThis.fetch = mockedFetch;
+    assert.equal((await webhook.POST(request("/catalog"))).status, 200);
+    assert.equal(context.commits.length, 1);
+    assert.equal(context.media.length, 1);
+});
+
 beforeEach(() => {
     process.env.TELEGRAM_BOT_TOKEN = "unit-test-token";
     process.env.TELEGRAM_WEBHOOK_SECRET = "unit-test-secret";
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "https://unit-test.supabase.co";
 });
 after(() => {
     globalThis.fetch = originalFetch;
     delete globalThis.__floralBackendTest;
     if (originalToken === undefined) delete process.env.TELEGRAM_BOT_TOKEN; else process.env.TELEGRAM_BOT_TOKEN = originalToken;
     if (originalSecret === undefined) delete process.env.TELEGRAM_WEBHOOK_SECRET; else process.env.TELEGRAM_WEBHOOK_SECRET = originalSecret;
+    if (originalSupabaseUrl === undefined) delete process.env.NEXT_PUBLIC_SUPABASE_URL; else process.env.NEXT_PUBLIC_SUPABASE_URL = originalSupabaseUrl;
 });
 
 test("rejects an incorrect webhook secret before accessing storage or Telegram", async () => {

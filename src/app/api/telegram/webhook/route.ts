@@ -1,10 +1,63 @@
 import { randomUUID, timingSafeEqual } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { parseBusinessProfile, type BusinessProfile } from "@/lib/business";
-import { emptySalesState, parseSalesState, runSalesTurn, type SalesProduct } from "@/lib/sales-assistant";
+import { emptySalesState, parseSalesState, runSalesTurn, type SalesProduct, type SalesTurn } from "@/lib/sales-assistant";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
+export const maxDuration = 60;
+
+type CatalogPhoto = { photo: string; caption: string };
+
+function catalogPhotoBase() {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    if (!url) return null;
+    try {
+        const base = new URL(url);
+        return base.protocol === "https:" ? `${base.origin}/storage/v1/object/public/product-images/` : null;
+    } catch { return null; }
+}
+
+function catalogPhotos(turn: SalesTurn, ownerId: string): CatalogPhoto[] {
+    const base = catalogPhotoBase();
+    if (!base) return [];
+    return (turn.catalogItems ?? []).flatMap(({ product, number }) => {
+        const path = product.image_path;
+        // Only this merchant's uploaded catalog photos; never arbitrary external URLs.
+        if (!path || !path.startsWith(`${ownerId}/`) || !/^[a-f0-9-]+\/[a-f0-9-]+\.(?:jpe?g|png|webp|gif)$/i.test(path)) return [];
+        return [{ photo: base + path, caption: `${number}. ${product.name.replace(/\s+/g, " ").slice(0, 120)} — ${new Intl.NumberFormat("ru-RU").format(product.price_kzt)} ₸${product.description ? `\n${product.description.slice(0, 300)}` : ""}` }];
+    });
+}
+
+function storedCatalogPhotos(state: unknown): CatalogPhoto[] {
+    const base = catalogPhotoBase();
+    if (!base || !state || typeof state !== "object") return [];
+    const photos = (state as Record<string, unknown>).telegramCatalog;
+    if (!Array.isArray(photos) || photos.length > 8) return [];
+    return photos.filter((photo): photo is CatalogPhoto => photo && typeof photo.photo === "string"
+        && photo.photo.startsWith(base) && /^[a-f0-9-]+\/[a-f0-9-]+\.(?:jpe?g|png|webp|gif)$/i.test(photo.photo.slice(base.length))
+        && typeof photo.caption === "string" && photo.caption.length <= 1024);
+}
+
+async function sendTelegramReply(chatId: number, text: string, state?: unknown) {
+    const photos = storedCatalogPhotos(state);
+    let photoUnavailable = false;
+    if (photos.length) {
+        const method = photos.length === 1 ? "sendPhoto" : "sendMediaGroup";
+        const body = photos.length === 1 ? { chat_id: chatId, ...photos[0] }
+            : { chat_id: chatId, media: photos.map(({ photo, caption }) => ({ type: "photo", media: photo, caption })) };
+        const response = await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/${method}`, {
+            method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body), signal: AbortSignal.timeout(10_000),
+        });
+        const result = await response.json() as { ok?: boolean };
+        if (!response.ok || !result.ok) {
+            // A removed/unsupported photo must not block checkout. Retry transient Telegram failures.
+            if (response.status === 400) photoUnavailable = true;
+            else throw new Error("Telegram catalog delivery failed");
+        }
+    }
+    await sendTelegramMessage(chatId, photoUnavailable ? `${text.slice(0, 3850)}\n\nФото сейчас недоступны. Можно выбрать букет по названию или номеру.` : text);
+}
 
 type TelegramMessage = { chat: { id: number; type: string }; text?: string };
 type TelegramUpdate = { update_id: number; message?: TelegramMessage };
@@ -113,7 +166,7 @@ export async function POST(request: NextRequest) {
             const chat = chatData as ChatSnapshot | null;
             if (chat && payload.update_id < Number(chat.last_update_id)) return NextResponse.json({ ok: true });
             if (chat && payload.update_id === Number(chat.last_update_id)) {
-                if (chat.last_reply) await sendTelegramMessage(message.chat.id, chat.last_reply);
+                if (chat.last_reply) await sendTelegramReply(message.chat.id, chat.last_reply, chat.state);
                 return NextResponse.json({ ok: true });
             }
             let businessQuery = admin.from("telegram_businesses").select("id,owner_id,business_name").eq("active", true);
@@ -138,7 +191,7 @@ export async function POST(request: NextRequest) {
             }
             const [profileResult, productResult] = await Promise.all([
                 admin.from("business_profiles").select("profile").eq("owner_id", business.owner_id).maybeSingle(),
-                admin.from("catalog_products").select("id,name,price_kzt,description")
+                admin.from("catalog_products").select("id,name,price_kzt,description,image_path")
                     .eq("owner_id", business.owner_id).order("created_at", { ascending: false }).limit(100),
             ]);
             if (profileResult.error || productResult.error) throw new Error("Unable to load business sales information");
@@ -149,6 +202,8 @@ export async function POST(request: NextRequest) {
             const state = !chat || startCommand || chat.business_id !== business.id
                 ? emptySalesState() : parseSalesState(chat.state);
             const turn = runSalesTurn({ message: startCommand ? "/start" : text, profile, products, state });
+            // Persist captions/URLs with the turn so retries keep the same catalog and prices.
+            const telegramState = { ...turn.state, telegramCatalog: catalogPhotos(turn, business.owner_id) };
             const order = turn.order ? {
                 id: randomUUID(),
                 product_id: turn.order.product.id,
@@ -164,7 +219,7 @@ export async function POST(request: NextRequest) {
                 p_expected_business_id: chat?.business_id ?? null,
                 p_business_id: business.id,
                 p_message: text,
-                p_state: turn.state,
+                p_state: telegramState,
                 p_reply: turn.reply.slice(0, 4000),
                 p_expected_profile: storedProfile,
                 p_order: order,
@@ -181,7 +236,14 @@ export async function POST(request: NextRequest) {
                 throw new Error("Unexpected Telegram commit result");
             }
             // Sending happens only after the transaction commits. A Telegram retry reuses this exact reply.
-            await sendTelegramMessage(message.chat.id, committed.reply);
+            if (committed.outcome === "duplicate") {
+                const { data: replay, error: replayError } = await admin.from("telegram_chats")
+                    .select("last_update_id,state").eq("chat_id", chatId).maybeSingle();
+                if (replayError) throw new Error("Unable to read committed catalog");
+                await sendTelegramReply(message.chat.id, committed.reply, Number(replay?.last_update_id) === payload.update_id ? replay?.state : undefined);
+            } else {
+                await sendTelegramReply(message.chat.id, committed.reply, telegramState);
+            }
             return NextResponse.json({ ok: true });
         }
         return NextResponse.json({ error: "Conversation changed; retry this update." }, { status: 503 });

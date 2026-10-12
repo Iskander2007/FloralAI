@@ -9,6 +9,30 @@ const compiled = ts.transpileModule(source, {
 }).outputText;
 const { emptySalesState, parseSalesState, runSalesTurn } = await import(`data:text/javascript;base64,${Buffer.from(compiled).toString("base64")}`);
 
+test("catalog photo selection follows pages and keeps original product numbers", () => {
+    const products = Array.from({ length: 18 }, (_, index) => ({ id: `photo-${index}`, name: `Букет ${index}`, price_kzt: (index + 1) * 1000, description: "", image_path: `owner/${index}.jpg` }));
+    const state = emptySalesState();
+    const page = runSalesTurn({ message: "/catalog 2", profile, products, state });
+    assert.deepEqual(page.catalogItems.map(({ number }) => number), [9, 10, 11, 12, 13, 14, 15, 16]);
+    assert.equal(runSalesTurn({ message: "/catalog 99", profile, products, state }).catalogItems, undefined);
+    assert.equal(runSalesTurn({ message: "/catalog -1", profile, products, state }).catalogItems, undefined);
+    const budget = runSalesTurn({ message: "2500", profile, products, state: { ...state, step: "budget" } });
+    assert.deepEqual(budget.catalogItems.map(({ number }) => number), [1, 2]);
+    const filtered = runSalesTurn({ message: "2500", profile, products: [products[5], products[0], products[1]], state: { ...state, step: "budget" } });
+    assert.deepEqual(filtered.catalogItems.map(({ number }) => number), [2, 3]);
+    assert.equal(runSalesTurn({ message: "500", profile, products, state: { ...state, step: "budget" } }).catalogItems, undefined);
+});
+
+test("photos are attached to catalog questions, never ordinary contact prompts", () => {
+    const products = [{ id: "photo-1", name: "Розы", price_kzt: 1000, description: "" }];
+    const state = { ...emptySalesState(), draft: { ...emptySalesState().draft, occasion: "Подарок", productId: "photo-1" }, step: "name" };
+    assert.equal(runSalesTurn({ message: "Айдана", profile, products, state }).catalogItems, undefined);
+    const answer = runSalesTurn({ message: "Покажи фото", profile, products, state });
+    assert.equal(answer.catalogItems.length, 1);
+    assert.equal(answer.state.step, "name");
+    assert.equal(answer.state.draft.productId, "photo-1");
+});
+
 const profile = {
     name: "Цветочная мастерская",
     category: "Retail & online shop",

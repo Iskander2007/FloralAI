@@ -5,6 +5,7 @@ export type SalesProduct = {
     name: string;
     price_kzt: number;
     description: string;
+    image_path?: string | null;
 };
 
 export type SalesDraft = {
@@ -32,6 +33,7 @@ export type SalesState = {
 export type SalesTurn = {
     reply: string;
     state: SalesState;
+    catalogItems?: { product: SalesProduct; number: number }[];
     order?: {
         draft: SalesDraft;
         product: SalesProduct;
@@ -119,6 +121,14 @@ function findProduct(message: string, products: SalesProduct[], numbered: boolea
         ?? products.find((product) => normalize(message).match(/^(?:хочу|беру|выбираю|выбрать|мне)\s+/i) && normalize(message).replace(/^(?:хочу|беру|выбираю|выбрать|мне)\s+/i, "").replace(/[.!]$/, "").trim() === normalize(product.name));
 }
 
+function catalogPage(products: SalesProduct[], budget: number | null = null, page = 1) {
+    return products.map((product, index) => ({ product, number: index + 1 }))
+        .filter(({ product }) => budget === null || product.price_kzt <= budget)
+        .slice((page - 1) * 8, page * 8);
+}
+
+type CatalogRenderer = (products: SalesProduct[], budget?: number | null, page?: number) => string;
+
 function catalog(products: SalesProduct[], budget: number | null = null, page = 1) {
     const eligible = products.map((product, index) => ({ product, number: index + 1 }))
         .filter(({ product }) => budget === null || product.price_kzt <= budget);
@@ -130,7 +140,7 @@ function catalog(products: SalesProduct[], budget: number | null = null, page = 
     }
     const pages = Math.ceil(eligible.length / 8);
     if (page < 1 || page > pages) return `В каталоге ${pages} ${pages === 1 ? "страница" : "страниц"}. Начало каталога: /catalog 1.`;
-    const items = eligible.slice((page - 1) * 8, page * 8).map(({ product, number }) =>
+    const items = catalogPage(products, budget, page).map(({ product, number }) =>
         `${number}. ${shorten(product.name.replace(/\s+/g, " "), 120)} — ${money(product.price_kzt)}${product.description ? `\n   ${shorten(product.description.replace(/\s+/g, " "), 120)}` : ""}`,
     ).join("\n\n");
     const footer = budget !== null
@@ -175,7 +185,7 @@ function nextStep(draft: SalesDraft): SalesState["step"] {
     return "review";
 }
 
-function continueFlow(state: SalesState, profile: BusinessProfile, products: SalesProduct[], prefix = ""): SalesTurn {
+function continueFlow(state: SalesState, profile: BusinessProfile, products: SalesProduct[], renderCatalog: CatalogRenderer, prefix = ""): SalesTurn {
     const step = nextStep(state.draft);
     const next = { ...state, step, reviewedQuote: undefined };
     const product = products.find((item) => item.id === state.draft.productId);
@@ -185,7 +195,7 @@ function continueFlow(state: SalesState, profile: BusinessProfile, products: Sal
     }
     const prompts: Partial<Record<SalesState["step"], string>> = {
         discover: "По какому поводу выбираете цветы и кому дарите?",
-        product: `${catalog(products, state.draft.budgetKzt)}\n\nКакой букет вам нравится? Напишите название или номер.`,
+        product: step === "product" ? `${renderCatalog(products, state.draft.budgetKzt)}\n\nКакой букет вам нравится? Напишите название или номер.` : "",
         name: "Как к вам обращаться?",
         phone: "Укажите ваш телефон для связи и подтверждения заявки, например +7 777 123 45 67.",
         address: `Куда доставить цветы? Напишите город, улицу, дом и квартиру.${profile.deliveryAreas?.trim() ? `\nРайоны доставки: ${profile.deliveryAreas.trim()}.` : ""}\nЕсли цветы получит другой человек, его имя и телефон можно добавить отдельно: «Комментарий: …».`,
@@ -219,7 +229,7 @@ function businessInformation(profile: BusinessProfile, servicesFirst: boolean) {
         || "Магазин пока не добавил описание и список услуг. Я могу помочь выбрать букет из каталога; остальные возможности уточнит владелец.";
 }
 
-function answerQuestion(message: string, profile: BusinessProfile, products: SalesProduct[]): string | null {
+function answerQuestion(message: string, profile: BusinessProfile, products: SalesProduct[], renderCatalog: CatalogRenderer): string | null {
     const text = normalize(message);
     if (/оператор|менеджер|владелец|сотрудник|живой человек|позвонить|связаться|человек\??$/.test(text)) {
         return profile.phone?.trim()
@@ -227,7 +237,7 @@ function answerQuestion(message: string, profile: BusinessProfile, products: Sal
             : "Магазин пока не указал контактный телефон. Можем сохранить заявку для владельца.";
     }
     if (/(?:ты|вы).*(?:бот|человек)|кто (?:ты|вы)/.test(text)) return `Я цифровой помощник магазина «${profile.name}». Помогу подобрать цветы и собрать заявку. Наличие и доставку подтвердит магазин.`;
-    const asks = /\?|^(?:а\s+)?(?:как|когда|где|сколько|какой|какая|какие|можно|что|кто|почему|зачем|чем|есть ли|есть у вас|а есть|расскажи|расскажите)|работаете|доставляете|оплата|условия|правила|наличие|каталог|цены|график|услуги|описание|^а доставка/.test(text);
+    const asks = /\?|^(?:а\s+)?(?:как|когда|где|сколько|какой|какая|какие|можно|что|кто|почему|зачем|чем|есть ли|есть у вас|а есть|расскажи|расскажите)|работаете|доставляете|оплата|условия|правила|наличие|каталог|цены|график|услуги|описание|фото|^покажи|^а доставка/.test(text);
     if (!asks) return null;
     if (/час|работ|график|открыт|закрыт/.test(text)) return profile.hours?.trim() ? `График магазина: ${profile.hours.trim()}. Заявку можно оставить здесь.` : "Магазин пока не указал часы работы. Я могу собрать заявку, а время исполнения подтвердит владелец.";
     if (/оплат|перевод|банк|реквизит|карт|деньг/.test(text)) {
@@ -242,8 +252,8 @@ function answerQuestion(message: string, profile: BusinessProfile, products: Sal
         ].join("\n");
     }
     if (/услуг|сервис|о (?:вас|вашем магазине|магазине|компании|бизнесе)|про (?:вас|ваш магазин|магазин|компанию|бизнес)|чем (?:вы )?(?:занимаетесь|можете помочь)|что (?:вы )?(?:предлагаете|продаете|умеете)|описани/.test(text)) return businessInformation(profile, /услуг|сервис/.test(text));
-    if (/налич|есть ли|а есть|свеж|остал/.test(text)) return "Могу предложить букеты из каталога. Актуальные остатки цветов не подключены, поэтому наличие подтвердит магазин.\n\n" + catalog(products);
-    if (/цен|стоим|сколько|каталог|ассортимент|букеты|варианты/.test(text)) return "Вот букеты и цены из каталога магазина:\n\n" + catalog(products);
+    if (/налич|есть ли|а есть|свеж|остал/.test(text)) return "Могу предложить букеты из каталога. Актуальные остатки цветов не подключены, поэтому наличие подтвердит магазин.\n\n" + renderCatalog(products);
+    if (/цен|стоим|сколько|каталог|ассортимент|букеты|варианты|фото|фотограф|покажи/.test(text)) return "Вот букеты и цены из каталога магазина:\n\n" + renderCatalog(products);
     if (/адрес|где|находит/.test(text)) return profile.location?.trim() ? `Адрес магазина: ${profile.location.trim()}.` : "Магазин пока не указал адрес.";
     if (/скидк|возврат|отмен|услови|правил/.test(text)) return profile.orderPolicy?.trim() ? `Условия магазина: ${shorten(profile.orderPolicy.trim(), 3000)}` : "Магазин пока не добавил эти условия. Их нужно уточнить у владельца.";
     return "Этого нет в подтверждённой информации магазина. Уточните у владельца" + (profile.phone?.trim() ? ` по телефону ${profile.phone.trim()}` : "") + ". Я могу помочь с выбором букета и заявкой.";
@@ -261,12 +271,12 @@ const correctionFields: { pattern: string; field: CorrectionField; step: SalesSt
     { pattern: "(?:комментарий|пожелания|записку)", field: "note", step: "review" },
 ];
 
-export function runSalesTurn({ message, profile, products: suppliedProducts, state: previous }: {
+function runSalesTurnText({ message, profile, products: suppliedProducts, state: previous }: {
     message: string;
     profile: BusinessProfile;
     products: SalesProduct[];
     state: SalesState;
-}): SalesTurn {
+}, renderCatalog: CatalogRenderer): SalesTurn {
     const messageText = message.trim();
     const text = normalize(messageText);
     const state: SalesState = { ...previous, draft: { ...previous.draft } };
@@ -285,7 +295,7 @@ export function runSalesTurn({ message, profile, products: suppliedProducts, sta
         const selection = ["discover", "product"].includes(state.step)
             ? "Для выбора напишите название или номер букета."
             : "Чтобы выбрать или сменить букет, напишите «Букет: название или номер».";
-        return { reply: `Каталог «${profile.name}»:\n\n${catalog(products, null, page)}\n\n${selection} Наличие подтвердит магазин.\n\n${resumePrompt(state)}`, state };
+        return { reply: `Каталог «${profile.name}»:\n\n${renderCatalog(products, null, page)}\n\n${selection} Наличие подтвердит магазин.\n\n${resumePrompt(state)}`, state };
     }
 
     if (state.step === "submitted") {
@@ -295,7 +305,7 @@ export function runSalesTurn({ message, profile, products: suppliedProducts, sta
                 state,
             };
         }
-        const answer = answerQuestion(messageText, profile, products);
+        const answer = answerQuestion(messageText, profile, products, renderCatalog);
         return { reply: answer ?? `Заявка уже сохранена${state.orderId ? `, номер ${state.orderId.slice(0, 8).toUpperCase()}` : ""}. Для нового заказа напишите /new. Для изменения сохранённой заявки свяжитесь с магазином${profile.phone?.trim() ? `: ${profile.phone.trim()}` : "."}`, state };
     }
     if (/^(привет|здравствуйте|добрый (?:день|вечер|утро)|салем|сәлем)[.!]?$/i.test(text)) {
@@ -311,7 +321,7 @@ export function runSalesTurn({ message, profile, products: suppliedProducts, sta
             if (correction.field === "note") return { reply: "Напишите «Комментарий: …». Чтобы убрать пожелания: «Комментарий: убрать».", state };
             const changed = { ...state, step: correction.step, reviewedQuote: undefined, draft: { ...state.draft, [correction.field]: correction.field === "budgetKzt" ? null : "" } };
             if (correction.step === "budget") return { reply: "Какой бюджет на букет? Напишите сумму в тенге или «без ограничений».", state: changed };
-            return continueFlow(changed, profile, products);
+            return continueFlow(changed, profile, products, renderCatalog);
         }
         const value = inline![1].trim();
         if (correction.field === "note") {
@@ -325,7 +335,7 @@ export function runSalesTurn({ message, profile, products: suppliedProducts, sta
             if (selected && amount !== null && selected.price_kzt > amount) state.draft.productId = "";
         } else if (correction.field === "productId") {
             const selected = findProduct(value, products, true);
-            if (!selected) return { reply: `Не нашла такой букет в каталоге.\n\n${catalog(products)}`, state };
+            if (!selected) return { reply: `Не нашла такой букет в каталоге.\n\n${renderCatalog(products)}`, state };
             if (state.draft.budgetKzt !== null && selected.price_kzt > state.draft.budgetKzt) return { reply: `Этот букет стоит ${money(selected.price_kzt)}, это выше бюджета. Выберите другой или измените бюджет.`, state };
             state.draft.productId = selected.id;
         } else {
@@ -337,7 +347,7 @@ export function runSalesTurn({ message, profile, products: suppliedProducts, sta
             if (!valid) return { reply: "Проверьте значение: " + (correction.field === "customerPhone" ? "телефон должен содержать от 10 до 15 цифр." : correction.field === "deliveryDate" ? "укажите дату или день и время доставки." : "данные неполные или слишком длинные."), state };
             state.draft[correction.field] = value;
         }
-        return continueFlow(state, profile, products, "Исправила.\n\n");
+        return continueFlow(state, profile, products, renderCatalog, "Исправила.\n\n");
     }
 
     // An explicit budget can be changed without confusing a phone or address with money.
@@ -347,7 +357,7 @@ export function runSalesTurn({ message, profile, products: suppliedProducts, sta
         state.draft.budgetKzt = amount;
         const selected = products.find((product) => product.id === state.draft.productId);
         if (selected && amount !== null && selected.price_kzt > amount) state.draft.productId = "";
-        return continueFlow(state, profile, products, "Бюджет обновила.\n\n");
+        return continueFlow(state, profile, products, renderCatalog, "Бюджет обновила.\n\n");
     }
 
     const choosingProduct = ["discover", "budget", "product"].includes(state.step);
@@ -358,10 +368,10 @@ export function runSalesTurn({ message, profile, products: suppliedProducts, sta
     if (product) {
         if (state.draft.budgetKzt !== null && product.price_kzt > state.draft.budgetKzt) return { reply: `«${product.name}» стоит ${money(product.price_kzt)}, это выше бюджета ${money(state.draft.budgetKzt)}. Можно выбрать другой букет или написать «бюджет ${product.price_kzt}».`, state };
         state.draft.productId = product.id;
-        return continueFlow(state, profile, products, `Хороший выбор: «${shorten(product.name, 120)}», ${money(product.price_kzt)}.\n\n`);
+        return continueFlow(state, profile, products, renderCatalog, `Хороший выбор: «${shorten(product.name, 120)}», ${money(product.price_kzt)}.\n\n`);
     }
 
-    const answer = answerQuestion(messageText, profile, products);
+    const answer = answerQuestion(messageText, profile, products, renderCatalog);
     if (answer) return { reply: `${answer}\n\n${resumePrompt(state)}`, state };
     if (!products.length) return { reply: `У магазина пока нет букетов в каталоге.${profile.phone?.trim() ? ` Свяжитесь с магазином: ${profile.phone.trim()}.` : " Владелец должен добавить товары перед оформлением."}`, state };
 
@@ -373,37 +383,37 @@ export function runSalesTurn({ message, profile, products: suppliedProducts, sta
             }
             if (messageText.length < 2 || messageText.length > 300 || /^(хочу (?:букет|цветы)|да|нет|спасибо|ок|хорошо)$/i.test(text)) return { reply: "Кому и по какому поводу выбираете цветы? Это поможет подобрать букет.", state };
             state.draft.occasion = messageText;
-            if (state.draft.productId) return continueFlow(state, profile, products);
-            if (state.draft.budgetKzt !== null) return continueFlow(state, profile, products);
+            if (state.draft.productId) return continueFlow(state, profile, products, renderCatalog);
+            if (state.draft.budgetKzt !== null) return continueFlow(state, profile, products, renderCatalog);
             return { reply: "Поняла, подберём подходящий букет. На какой бюджет ориентироваться? Напишите сумму в тенге или «без ограничений».", state: { ...state, step: "budget" } };
         case "budget": {
             const amount = parseBudget(messageText);
             if (amount === undefined) return { reply: "Какой бюджет на букет? Например: «15 000» или «без ограничений».", state };
             state.draft.budgetKzt = amount;
-            return { reply: `${amount === null ? "Можно рассмотреть эти букеты:" : `Вот варианты до ${money(amount)}:`}\n\n${catalog(products, amount)}\n\nНапишите название или номер букета.`, state: { ...state, step: "product" } };
+            return { reply: `${amount === null ? "Можно рассмотреть эти букеты:" : `Вот варианты до ${money(amount)}:`}\n\n${renderCatalog(products, amount)}\n\nНапишите название или номер букета.`, state: { ...state, step: "product" } };
         }
-        case "product": return { reply: `Не нашла такой вариант в каталоге. Напишите точное название или номер.\n\n${catalog(products, state.draft.budgetKzt)}`, state };
+        case "product": return { reply: `Не нашла такой вариант в каталоге. Напишите точное название или номер.\n\n${renderCatalog(products, state.draft.budgetKzt)}`, state };
         case "name":
             if (!validName(messageText)) return { reply: "Напишите своё имя буквами, например «Айдана».", state };
             state.draft.customerName = messageText;
-            return continueFlow(state, profile, products);
+            return continueFlow(state, profile, products, renderCatalog);
         case "phone":
             if (!validPhone(messageText)) return { reply: "Проверьте телефон: нужно от 10 до 15 цифр. Например +7 777 123 45 67.", state };
             state.draft.customerPhone = messageText;
-            return continueFlow(state, profile, products);
+            return continueFlow(state, profile, products, renderCatalog);
         case "address":
             if (!validAddress(messageText)) return { reply: "Напишите полный адрес: город, улица, дом и квартира при необходимости.", state };
             state.draft.deliveryAddress = messageText;
-            return continueFlow(state, profile, products);
+            return continueFlow(state, profile, products, renderCatalog);
         case "date":
             if (!validDate(messageText)) return { reply: "Укажите дату и удобное время доставки, например «завтра после 15:00».", state };
             state.draft.deliveryDate = messageText;
-            return continueFlow(state, profile, products);
+            return continueFlow(state, profile, products, renderCatalog);
         case "review": {
             if (!/^(?:подтверждаю(?: заказ| заявку)?|все верно|верно|да|оформить|оформляйте|confirm)[.!]?$/i.test(text)) return { reply: "Для сохранения заявки напишите «Подтверждаю». Если нужно исправить данные — например, «Изменить адрес».", state };
             const selected = products.find((item) => item.id === state.draft.productId);
-            if (!selected) return continueFlow({ ...state, draft: { ...state.draft, productId: "" } }, profile, products, "Выбранный букет больше не указан в каталоге. Выберите другой.\n\n");
-            if (nextStep(state.draft) !== "review") return continueFlow(state, profile, products, "Не хватает данных для заявки.\n\n");
+            if (!selected) return continueFlow({ ...state, draft: { ...state.draft, productId: "" } }, profile, products, renderCatalog, "Выбранный букет больше не указан в каталоге. Выберите другой.\n\n");
+            if (nextStep(state.draft) !== "review") return continueFlow(state, profile, products, renderCatalog, "Не хватает данных для заявки.\n\n");
             const currentQuote = quote(selected, profile);
             if (!state.reviewedQuote || state.reviewedQuote.productPriceKzt !== currentQuote.productPriceKzt || state.reviewedQuote.deliveryFeeKzt !== currentQuote.deliveryFeeKzt || state.reviewedQuote.totalKzt !== currentQuote.totalKzt) {
                 const updated = review(state, selected, profile);
@@ -416,4 +426,15 @@ export function runSalesTurn({ message, profile, products: suppliedProducts, sta
             };
         }
     }
+}
+
+
+/** Keep the photo selection identical to the catalog page actually rendered in this turn. */
+export function runSalesTurn(input: Parameters<typeof runSalesTurnText>[0]): SalesTurn {
+    let items: NonNullable<SalesTurn["catalogItems"]> = [];
+    const turn = runSalesTurnText(input, (products, budget = null, page = 1) => {
+        items = catalogPage(products, budget, page);
+        return catalog(products, budget, page);
+    });
+    return items.length ? { ...turn, catalogItems: items } : turn;
 }
