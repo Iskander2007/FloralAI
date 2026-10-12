@@ -269,7 +269,7 @@ export function AuthForm({
                             <input
                                 id="password"
                                 type={visible ? "text" : "password"}
-                                autoComplete="current-password"
+                                autoComplete={isSignup ? "new-password" : "current-password"}
                                 placeholder={t("Password")}
                                 minLength={1}
                                 required

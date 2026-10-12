@@ -40,6 +40,7 @@ npm run dev
 ```
 
 Open `http://localhost:3000`. The product works without API keys in mock mode. `npm run build` generates Prisma Client and creates a production build; `npm run lint` runs ESLint.
+Run `npm test` to check supported languages, translated interface labels, and English fallback behavior.
 
 ## Environment variables
 
