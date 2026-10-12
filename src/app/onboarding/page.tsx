@@ -136,8 +136,7 @@ export default function OnboardingPage() {
                         <Check size={14} /> {t("Business profile saved")}
                     </span>
                     <span>
-                        <Check size={14} /> {t("Assistant style set to")}{" "}
-                        {business.tone.toLowerCase()}
+                        <Check size={14} />                         {t("Assistant style set to")} {t(business.tone)}
                     </span>
                     <span>
                         <Check size={14} /> {t("Demo chat ready to test")}
@@ -379,8 +378,8 @@ export default function OnboardingPage() {
                                             {business.tone === tone.name && <i />}
                                         </span>
                                         <span>
-                                            <b>{tone.name}</b>
-                                            <small>{tone.description}</small>
+                                            <b>{t(tone.name)}</b>
+                                            <small>{t(tone.description)}</small>
                                         </span>
                                         <ChevronRight size={15} />
                                     </button>

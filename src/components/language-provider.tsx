@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useSyncExternalStore } from "react";
+import { usePathname } from "next/navigation";
 import { isLocale, Locale, translate } from "@/lib/i18n";
 
 type LanguageContextValue = {
@@ -21,6 +22,7 @@ function getBrowserLocale(): Locale {
 }
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
+    const pathname = usePathname();
     const subscribe = useCallback((onChange: () => void) => {
         window.addEventListener("storage", onChange);
         window.addEventListener(localeChangeEvent, onChange);
@@ -42,7 +44,17 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
 
     useEffect(() => {
         document.documentElement.lang = locale;
-    }, [locale]);
+        const title =
+            pathname === "/login"
+                ? "Log in to FloralAI"
+                : pathname === "/signup"
+                  ? "Create your FloralAI account"
+                  : "FloralAI | Thoughtful conversations, beautifully handled";
+        const timer = window.setTimeout(() => {
+            document.title = translate(locale, title);
+        }, 0);
+        return () => window.clearTimeout(timer);
+    }, [locale, pathname]);
 
     const value = useMemo<LanguageContextValue>(
         () => ({

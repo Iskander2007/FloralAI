@@ -180,8 +180,10 @@ function replyFor(business: BusinessKey, text: string) {
 }
 
 function Brand() {
+    const { t } = useLanguage();
+
     return (
-        <Link href="/" className="brand" aria-label="FloralAI home">
+        <Link href="/" className="brand" aria-label={t("FloralAI home")}>
             <span className="brand-mark">
                 <Sparkles size={17} strokeWidth={2.4} />
             </span>
@@ -279,7 +281,9 @@ function ChatDemo({
                         <div
                             className={`message-bubble ${message.role === "assistant" ? "assistant-bubble" : "customer-bubble"}`}
                         >
-                            {message.content}
+                            {message.role === "assistant"
+                                ? t(message.content)
+                                : message.content}
                             <span className="message-time">10:43</span>
                         </div>
                     </div>
@@ -395,7 +399,9 @@ const faqs = [
 ];
 
 export default function Home() {
-    const { t } = useLanguage();
+    const { locale, t } = useLanguage();
+    const numberLocale =
+        locale === "ru" ? "ru-RU" : locale === "kk" ? "kk-KZ" : "en-US";
     const [menuOpen, setMenuOpen] = useState(false);
     const [openFaq, setOpenFaq] = useState<number | null>(0);
     const [demoOpen, setDemoOpen] = useState(false);
@@ -408,7 +414,7 @@ export default function Home() {
                     <Brand />
                     <nav
                         className={menuOpen ? "nav-open" : ""}
-                        aria-label="Main navigation"
+                        aria-label={t("Main navigation")}
                     >
                         <a href="#product" onClick={() => setMenuOpen(false)}>
                             {t("Product")}
@@ -564,7 +570,7 @@ export default function Home() {
                             {t("customer.")}{" "}
                             <span>
                                 {t("Without being")}
-                                <br className="mobile-break" /> on your phone.
+                                <br className="mobile-break" /> {t("on your phone.")}
                             </span>
                         </h2>
                     </div>
@@ -578,9 +584,9 @@ export default function Home() {
                             <div className="benefit-icon">
                                 <Icon size={19} />
                             </div>
-                            <span className="benefit-metric">{metric}</span>
-                            <h3>{title}</h3>
-                            <p>{copy}</p>
+                            <span className="benefit-metric">{t(metric)}</span>
+                            <h3>{t(title)}</h3>
+                            <p>{t(copy)}</p>
                         </article>
                     ))}
                 </div>
@@ -699,7 +705,7 @@ export default function Home() {
                                 </span>{" "}
                                 MIRA STUDIO{" "}
                                 <span className="doc-status">
-                                    <Check size={11} /> READY
+                                    <Check size={11} /> {t("READY")}
                                 </span>
                             </div>
                             <h3>{t("Services & pricing")}</h3>
@@ -707,21 +713,21 @@ export default function Home() {
                             <div className="doc-entry">
                                 <div>
                                     <b>{t("Cut & style")}</b>
-                                    <span>60 minutes</span>
+                                    <span>{t("60 minutes")}</span>
                                 </div>
                                 <strong>8,000 ₸</strong>
                             </div>
                             <div className="doc-entry">
                                 <div>
                                     <b>{t("Color refresh")}</b>
-                                    <span>From 2 hours</span>
+                                    <span>{t("From 2 hours")}</span>
                                 </div>
                                 <strong>24,000 ₸</strong>
                             </div>
                             <div className="doc-entry">
                                 <div>
                                     <b>{t("Signature manicure")}</b>
-                                    <span>45 minutes</span>
+                                    <span>{t("45 minutes")}</span>
                                 </div>
                                 <strong>9,500 ₸</strong>
                             </div>
@@ -731,13 +737,13 @@ export default function Home() {
                         </div>
                     </div>
                     <div className="knowledge-chip chip-a">
-                        <span className="chip-dot" /> Services
+                        <span className="chip-dot" /> {t("Services")}
                     </div>
                     <div className="knowledge-chip chip-b">
                         <span className="chip-dot chip-dot-purple" /> {t("Opening hours")}
                     </div>
                     <div className="knowledge-chip chip-c">
-                        <span className="chip-dot chip-dot-orange" /> FAQ
+                        <span className="chip-dot chip-dot-orange" /> {t("FAQ")}
                     </div>
                 </div>
             </section>
@@ -771,7 +777,7 @@ export default function Home() {
                             {t("Write a few sentences about what you do. That’s all we need to start.")}
                         </p>
                         <div className="step-visual step-visual-note">
-                            <span>“We’re a neighborhood salon in Almaty...”</span>
+                            <span>{t("We’re a neighborhood salon in Almaty...")}</span>
                             <i />
                             <i />
                         </div>
@@ -791,8 +797,8 @@ export default function Home() {
                             <span>
                                 {t("Friendly")} <Check size={11} />
                             </span>
-                            <span>Russian + English</span>
-                            <span>Bookings</span>
+                            <span>{t("Russian + English")}</span>
+                            <span>{t("Bookings")}</span>
                         </div>
                     </article>
                     <article className="step-card">
@@ -954,7 +960,7 @@ export default function Home() {
                         <h3>{t("Free")}</h3>
                         <p>{t("Try FloralAI with a real, working demo.")}</p>
                         <div className="price">
-                            <strong>₸{plans.free.monthlyPriceKzt.toLocaleString("en-US")}</strong>
+                            <strong>₸{plans.free.monthlyPriceKzt.toLocaleString(numberLocale)}</strong>
                             <span>/ {t("month")}</span>
                         </div>
                         <Link href="/signup" className="button button-outline price-button">
@@ -963,23 +969,23 @@ export default function Home() {
                         <div className="price-divider" />
                         <span className="feature-caption">{t("INCLUDED")}</span>
                         {[
-                            `${plans.free.messageLimit.toLocaleString("en-US")} conversations / month`,
-                            `${plans.free.assistantLimit} AI assistant`,
+                            `${plans.free.messageLimit.toLocaleString(numberLocale)} ${t("conversations / month")}`,
+                            `${plans.free.assistantLimit} ${t("AI assistant")}`,
                             t("Basic business knowledge"),
                             t("Essential analytics"),
                         ].map((item) => (
                             <div className="price-feature" key={item}>
-                                <Check size={14} /> {item}
+                                <Check size={14} /> {t(item)}
                             </div>
                         ))}
                     </article>
                     <article className="price-card price-featured">
-                        <div className="popular-tag">MOST POPULAR</div>
+                        <div className="popular-tag">{t("MOST POPULAR")}</div>
                         <span className="plan-label">{t("FOR YOUR EVERYDAY")}</span>
                         <h3>{t("Starter")}</h3>
                         <p>{t("More time back, as your business grows.")}</p>
                         <div className="price">
-                            <strong>₸{Math.round(plans.starter.monthlyPriceKzt * (annualBilling ? 1 - annualDiscount : 1)).toLocaleString("en-US")}</strong>
+                            <strong>₸{Math.round(plans.starter.monthlyPriceKzt * (annualBilling ? 1 - annualDiscount : 1)).toLocaleString(numberLocale)}</strong>
                             <span>{annualBilling ? `/ ${t("month, billed yearly")}` : `/ ${t("month")}`}</span>
                         </div>
                         <Link
@@ -991,11 +997,11 @@ export default function Home() {
                         <div className="price-divider" />
                         <span className="feature-caption">{t("EVERYTHING IN FREE, PLUS")}</span>
                         {[
-                            `${plans.starter.messageLimit.toLocaleString("en-US")} conversations / month`,
+                            `${plans.starter.messageLimit.toLocaleString(numberLocale)} ${t("conversations / month")}`,
                             ...plans.starter.features,
                         ].map((item) => (
                             <div className="price-feature" key={item}>
-                                <Check size={14} /> {item}
+                                <Check size={14} /> {t(item)}
                             </div>
                         ))}
                     </article>
@@ -1004,7 +1010,7 @@ export default function Home() {
                         <h3>{t("Business")}</h3>
                         <p>{t("More assistants and more ways to grow.")}</p>
                         <div className="price">
-                            <strong>₸{Math.round(plans.business.monthlyPriceKzt * (annualBilling ? 1 - annualDiscount : 1)).toLocaleString("en-US")}</strong>
+                            <strong>₸{Math.round(plans.business.monthlyPriceKzt * (annualBilling ? 1 - annualDiscount : 1)).toLocaleString(numberLocale)}</strong>
                             <span>{annualBilling ? `/ ${t("month, billed yearly")}` : `/ ${t("month")}`}</span>
                         </div>
                         <Link
@@ -1016,11 +1022,11 @@ export default function Home() {
                         <div className="price-divider" />
                         <span className="feature-caption">{t("EVERYTHING IN STARTER, PLUS")}</span>
                         {[
-                            `${plans.business.messageLimit.toLocaleString("en-US")} conversations / month`,
+                            `${plans.business.messageLimit.toLocaleString(numberLocale)} ${t("conversations / month")}`,
                             ...plans.business.features,
                         ].map((item) => (
                             <div className="price-feature" key={item}>
-                                <Check size={14} /> {item}
+                                <Check size={14} /> {t(item)}
                             </div>
                         ))}
                     </article>

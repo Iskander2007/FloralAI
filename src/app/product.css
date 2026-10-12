@@ -166,15 +166,7 @@
     background: #fafbf9;
     color: #626b64;
     font-size: 9px;
-    cursor: not-allowed;
-}
-
-.google-button span {
-    padding: 3px 5px;
-    border-radius: 3px;
-    background: #eff0ed;
-    color: #929992;
-    font-size: 7px;
+    cursor: pointer;
 }
 
 .auth-switch {

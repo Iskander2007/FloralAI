@@ -205,7 +205,7 @@ function TestChat({ workspace }: { workspace: DemoWorkspace }) {
                     </div>
                 )}
                 <div className="test-message assistant-message">
-                    {t("Hi, I’m your friendly assistant")} for{" "}
+                    {t("Hi, I’m your friendly assistant")} {t("for")}{" "}
                     {business?.name || t("your business")}.{" "}
                     {t("Ask me about your services, prices or hours.")}
                 </div>
@@ -307,7 +307,9 @@ function EmptyState({
 
 export default function DashboardPage() {
     const router = useRouter();
-    const { t } = useLanguage();
+    const { locale, t } = useLanguage();
+    const numberLocale =
+        locale === "ru" ? "ru-RU" : locale === "kk" ? "kk-KZ" : "en-US";
     const { ready, workspace, authError } = useWorkspaceSession();
     const view = useSyncExternalStore(
         subscribeToDashboardView,
@@ -583,7 +585,7 @@ export default function DashboardPage() {
                                                 <Bot size={17} />
                                             </span>
                                             <div>
-                                                <b>{business.name} assistant</b>
+                                                <b>{business.name} {t("assistant")}</b>
                                                 <span>
                                                     <i className="status-dot" /> {t("Ready to test · not published")}
                                                 </span>
@@ -633,7 +635,7 @@ export default function DashboardPage() {
                                                 <p>{t("Customer conversations over time")}</p>
                                             </div>
                                             <button type="button" className="select-period">
-                                                Last 7 days <ChevronDown size={13} />
+                                                {t("Last 7 days")} <ChevronDown size={13} />
                                             </button>
                                         </div>
                                         <div className="empty-chart">
@@ -743,7 +745,7 @@ export default function DashboardPage() {
                                             </p>
                                         </div>
                                         <span className="draft-status">
-                                            <i /> DRAFT · NOT PUBLISHED
+                                            <i /> {t("DRAFT · NOT PUBLISHED")}
                                         </span>
                                     </div>
                                     <div className="assistant-builder-grid">
@@ -913,7 +915,7 @@ export default function DashboardPage() {
                                                 type="button"
                                                 className="button button-outline"
                                                 disabled
-                                                title="Document upload is not configured"
+                                                title={t("Document upload is not configured")}
                                             >
                                                 <ArrowDownToLine size={14} /> {t("Upload document")}
                                             </button>
@@ -938,7 +940,7 @@ export default function DashboardPage() {
                                             <span>{t("Business profile · Edited in this browser")}</span>
                                         </div>
                                         <span className="knowledge-ready">
-                                            <Check size={12} /> APPROVED
+                                            <Check size={12} /> {t("APPROVED")}
                                         </span>
                                     </div>
                                     <div className="dashboard-panel knowledge-editor">
@@ -973,7 +975,7 @@ export default function DashboardPage() {
                                                 />
                                                 <div className="knowledge-save-row">
                                                     <small>
-                                                        {knowledgeText.length} / 4,000 characters
+                                                        {knowledgeText.length} / 4,000 {t("characters")}
                                                     </small>
                                                     <button
                                                         type="button"
@@ -1246,7 +1248,7 @@ export default function DashboardPage() {
                                                 type="button"
                                                 className="button button-outline"
                                                 disabled
-                                                title="Team invitations are not configured"
+                                                title={t("Team invitations are not configured")}
                                             >
                                                 <Plus size={14} /> {t("Invite member")}
                                             </button>
@@ -1291,14 +1293,14 @@ export default function DashboardPage() {
                                                 <i />
                                             </div>
                                             <small>
-                                                No live conversations counted in this browser preview.
+                                                {t("No live conversations counted in this browser preview.")}
                                             </small>
                                         </div>
                                         <button
                                             type="button"
                                             className="button button-outline"
                                             disabled
-                                            title="Stripe is not connected"
+                                            title={t("Stripe is not connected")}
                                         >
                                             {t("Manage subscription")}
                                         </button>
@@ -1308,18 +1310,18 @@ export default function DashboardPage() {
                                             {
                                                 name: "Starter",
                                                 price: "₸19,900",
-                                                count: "2,000 conversations",
+                                                count: 2_000,
                                             },
                                             {
                                                 name: "Business",
                                                 price: "₸49,900",
-                                                count: "10,000 conversations",
+                                                count: 10_000,
                                             },
                                         ].map((plan) => (
                                             <article key={plan.name}>
                                                 <span className="plan-label">{t("GROWING BUSINESS")}</span>
-                                                <h3>{plan.name}</h3>
-                                                <p>{plan.count} / month</p>
+                                                <h3>{t(plan.name)}</h3>
+                                                <p>{plan.count.toLocaleString(numberLocale)} {t("conversations / month")}</p>
                                                 <div>
                                                     <b>{plan.price}</b>
                                                     <span> / {t("per month")}</span>
@@ -1327,7 +1329,7 @@ export default function DashboardPage() {
                                                 <button
                                                     type="button"
                                                     disabled
-                                                    title="Card payments are not configured"
+                                                    title={t("Card payments are not configured")}
                                                 >
                                                     {t("Not configured")}
                                                 </button>
