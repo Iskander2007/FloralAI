@@ -86,6 +86,9 @@ export async function POST() {
     if (userError || !userData.user) {
         return NextResponse.json({ error: "Please sign in to connect Telegram." }, { status: 401 });
     }
+    const access = await supabase.rpc("has_workspace_access");
+    if (access.error || typeof access.data !== "boolean") return NextResponse.json({ error: "Не удалось проверить подписку." }, { status: 503 });
+    if (!access.data) return NextResponse.json({ error: "Пробный период завершён. Оформите подписку в разделе «Тариф и оплата».", code: "SUBSCRIPTION_REQUIRED" }, { status: 402 });
 
     const [{ data: business, error: businessError }, { count: productCount, error: catalogError }, { error: orderStorageError }] = await Promise.all([
         supabase.from("business_profiles").select("profile").eq("owner_id", userData.user.id).maybeSingle(),

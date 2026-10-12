@@ -44,6 +44,8 @@ import { ProductCatalog } from "@/components/product-catalog";
 import { TelegramChannel } from "@/components/telegram-channel";
 import { BusinessProfileEditor } from "@/components/business-profile-editor";
 import { SalesOrders } from "@/components/sales-orders";
+import { SubscriptionBilling } from "@/components/subscription-billing";
+import { SubscriptionAccessBanner } from "@/components/subscription-access-banner";
 import { emptySalesState, type SalesState } from "@/lib/sales-assistant";
 import type { ChatTurn } from "@/lib/ai";
 import "../floral-theme.css";
@@ -277,9 +279,7 @@ function EmptyState({
 
 export default function DashboardPage() {
     const router = useRouter();
-    const { locale, t } = useLanguage();
-    const numberLocale =
-        locale === "ru" ? "ru-RU" : locale === "kk" ? "kk-KZ" : "en-US";
+    const { t } = useLanguage();
     const { ready, workspace, authError, profileSyncError } = useWorkspaceSession();
     const view = useSyncExternalStore(
         subscribeToDashboardView,
@@ -382,7 +382,7 @@ export default function DashboardPage() {
                     </span>
                     <span>
                         <b>{business?.name || "Your business"}</b>
-                        <small>{t("Free workspace")}</small>
+                        <small>FloralAI</small>
                     </span>
                     <ChevronDown size={14} />
                 </button>
@@ -410,13 +410,9 @@ export default function DashboardPage() {
                 <div className="sidebar-bottom">
                     <div className="plan-usage">
                         <div>
-                            <span>{t("FREE PLAN")}</span>
-                            <span>0 / 100</span>
+                            <span>Тариф и оплата</span>
                         </div>
-                        <div className="usage-track">
-                            <i />
-                        </div>
-                        <small>{t("conversations this month")}</small>
+                        <small>Пробная неделя и счета Kaspi</small>
                         <Link
                             href="/dashboard?view=billing"
                             onClick={() => selectView("billing")}
@@ -478,7 +474,8 @@ export default function DashboardPage() {
                     </div>
                 </header>
                 <main className="dashboard-content">
-                    {!business ? (
+                    {view !== "billing" && <SubscriptionAccessBanner />}
+                    {view === "billing" ? <SubscriptionBilling /> : !business ? (
                         <section className="dashboard-welcome">
                             <div className="dashboard-empty-hero">
                                 <div className="assistant-avatar large">
@@ -1085,85 +1082,6 @@ export default function DashboardPage() {
                                 </>
                             )}
 
-                            {view === "billing" && (
-                                <>
-                                    <div className="dashboard-page-heading">
-                                        <div>
-                                            <div className="eyebrow">{t("PLANS THAT GROW WITH YOU")}</div>
-                                            <h1>{t("Plan & billing")}</h1>
-                                            <p>{t("Your plan at a glance. No payment details stored.")}</p>
-                                        </div>
-                                    </div>
-                                    <section className="dashboard-panel billing-panel">
-                                        <div className="billing-plan-icon">
-                                            <CreditCard size={18} />
-                                        </div>
-                                        <div className="billing-plan-copy">
-                                            <span className="plan-label">{t("CURRENT PLAN")}</span>
-                                            <h2>{t("Free")}</h2>
-                                            <p>{t("Everything you need to try your assistant.")}</p>
-                                        </div>
-                                        <div className="billing-price">
-                                            <b>₸0</b>
-                                            <span>{t("per month")}</span>
-                                        </div>
-                                        <div className="billing-usage">
-                                            <div>
-                                                <span>{t("Monthly conversations")}</span>
-                                                <b>0 / 100</b>
-                                            </div>
-                                            <div className="usage-track">
-                                                <i />
-                                            </div>
-                                            <small>
-                                                Статистика использования тарифа пока недоступна.
-                                            </small>
-                                        </div>
-                                        <button
-                                            type="button"
-                                            className="button button-outline"
-                                            disabled
-                                            title={t("Stripe is not connected")}
-                                        >
-                                            {t("Manage subscription")}
-                                        </button>
-                                    </section>
-                                    <div className="billing-plan-grid">
-                                        {[
-                                            {
-                                                name: "Starter",
-                                                price: "₸19,900",
-                                                count: 2_000,
-                                            },
-                                            {
-                                                name: "Business",
-                                                price: "₸49,900",
-                                                count: 10_000,
-                                            },
-                                        ].map((plan) => (
-                                            <article key={plan.name}>
-                                                <span className="plan-label">{t("GROWING BUSINESS")}</span>
-                                                <h3>{t(plan.name)}</h3>
-                                                <p>{plan.count.toLocaleString(numberLocale)} {t("conversations / month")}</p>
-                                                <div>
-                                                    <b>{plan.price}</b>
-                                                    <span> / {t("per month")}</span>
-                                                </div>
-                                                <button
-                                                    type="button"
-                                                    disabled
-                                                    title={t("Card payments are not configured")}
-                                                >
-                                                    {t("Not configured")}
-                                                </button>
-                                            </article>
-                                        ))}
-                                    </div>
-                                    <div className="integration-disclosure">
-                                        <CreditCard size={14} /> {t("Billing preview only. Stripe and card payments are not configured. FloralAI never collects card numbers in this preview.")}
-                                    </div>
-                                </>
-                            )}
                         </>
                     )}
                 </main>

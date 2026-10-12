@@ -34,6 +34,11 @@ export function AuthForm({
     const authConfigured = supabase !== null;
     const isSignup = mode === "signup";
 
+    function onboardingPath() {
+        const plan = new URLSearchParams(window.location.search).get("plan");
+        return plan === "starter" || plan === "business" ? `/onboarding?plan=${plan}` : "/onboarding";
+    }
+
     useEffect(() => {
         if (resendCountdown === 0) return;
         const timer = window.setTimeout(
@@ -109,7 +114,7 @@ export function AuthForm({
                 router.push(
                     sameAccount && existing?.business
                         ? "/dashboard"
-                        : "/onboarding",
+                        : onboardingPath(),
                 );
             } catch (authError) {
                 setError(
@@ -140,7 +145,7 @@ export function AuthForm({
                     : null,
             assistantPublished: existing?.assistantPublished ?? false,
         });
-        router.push(!isSignup && existing?.business ? "/dashboard" : "/onboarding");
+        router.push(!isSignup && existing?.business ? "/dashboard" : onboardingPath());
     }
 
     async function continueWithGoogle() {
@@ -157,7 +162,7 @@ export function AuthForm({
             const { error: oauthError } = await supabase.auth.signInWithOAuth({
                 provider: "google",
                 options: {
-                    redirectTo: `${window.location.origin}/auth/callback?next=/onboarding`,
+                    redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(onboardingPath())}`,
                 },
             });
             if (oauthError) throw oauthError;

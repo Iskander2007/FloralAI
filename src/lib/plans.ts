@@ -1,25 +1,26 @@
 export const annualDiscount = 0.2;
+export const trialDays = 7;
 
 export const plans = {
     free: {
-        name: "Free",
+        name: "Free trial",
         monthlyPriceKzt: 0,
         messageLimit: 100,
         assistantLimit: 1,
-        features: ["Basic business knowledge", "Essential analytics"],
+        features: ["All available FloralAI features", "Catalog with photos and prices", "Telegram assistant", "Order management"],
     },
     starter: {
         name: "Starter",
-        monthlyPriceKzt: 19_900,
+        monthlyPriceKzt: 9_950,
         messageLimit: 2_000,
         assistantLimit: 1,
-        features: ["Lead capture & appointments", "Business knowledge base", "Multiple languages", "Conversation analytics"],
+        features: ["Business knowledge base", "Catalog with photos and prices", "Telegram assistant", "Order management"],
     },
     business: {
         name: "Business",
-        monthlyPriceKzt: 49_900,
+        monthlyPriceKzt: 24_950,
         messageLimit: 10_000,
         assistantLimit: 5,
-        features: ["Multiple assistants", "Advanced analytics", "Team access & integrations", "Priority support"],
+        features: ["Business knowledge base", "Catalog with photos and prices", "Telegram assistant", "Order management"],
     },
 } as const;

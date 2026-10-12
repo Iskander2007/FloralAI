@@ -29,8 +29,8 @@ const product = {
     id: "30000000-0000-4000-8000-000000000001", name: "Проверенные розы", price_kzt: 12000, description: "15 роз",
 };
 
-function installClient({ user = { id: owner }, savedProfile = profile } = {}) {
-    const context = { reads: [], writes: [] };
+function installClient({ user = { id: owner }, savedProfile = profile, accessError = null, access = (id) => id === owner } = {}) {
+    const context = { reads: [], writes: [], rpcCalls: [] };
     const rows = {
         business_profiles: savedProfile ? [{ owner_id: owner, profile: savedProfile }] : [],
         catalog_products: [{ ...product, owner_id: owner }, { ...product, id: "other-product", name: "Чужой букет", owner_id: "other" }],
@@ -38,7 +38,11 @@ function installClient({ user = { id: owner }, savedProfile = profile } = {}) {
     const rejectWrite = (...args) => { context.writes.push(args); throw new Error("Owner preview must never write customer orders"); };
     context.client = {
         auth: { getUser: async () => ({ data: { user }, error: null }) },
-        rpc: rejectWrite,
+        rpc(name, args) {
+            context.rpcCalls.push({ name, args });
+            if (name !== "has_workspace_access") return rejectWrite(name, args);
+            return Promise.resolve({ data: access(user?.id), error: accessError });
+        },
         from(table) {
             const filters = [];
             const query = {
@@ -70,6 +74,28 @@ test("owner preview rejects unauthenticated requests before business or catalog 
     assert.equal(response.status, 401);
     assert.equal(context.reads.length, 0);
     assert.equal(context.writes.length, 0);
+    assert.equal(context.rpcCalls.length, 0);
+});
+
+test("expired account cannot use another owner's paid access or read business data", async () => {
+    const context = installClient({ user: { id: "expired-owner" } });
+    const response = await POST(request({ message: "/catalog", owner_id: owner, hasAccess: true, business: profile }));
+    assert.equal(response.status, 402);
+    assert.equal((await response.json()).code, "SUBSCRIPTION_REQUIRED");
+    assert.deepEqual(context.rpcCalls, [{ name: "has_workspace_access", args: undefined }]);
+    assert.deepEqual(context.reads, []);
+    assert.deepEqual(context.writes, []);
+});
+
+test("preview fails closed when subscription verification fails or returns no boolean", async () => {
+    for (const options of [{ accessError: { code: "rpc-unavailable" } }, { access: () => null }]) {
+        const context = installClient(options);
+        const response = await POST(request({ message: "/catalog" }));
+        assert.equal(response.status, 503);
+        assert.match((await response.json()).error, /Не удалось проверить доступ/);
+        assert.deepEqual(context.reads, []);
+        assert.deepEqual(context.writes, []);
+    }
 });
 
 test("preview ignores forged request business data and reads only the signed-in owner's catalog", async () => {

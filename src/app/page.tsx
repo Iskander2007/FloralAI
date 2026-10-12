@@ -383,6 +383,14 @@ const benefits = [
 
 const faqs = [
     [
+        "How does the free trial work?",
+        "Try all available FloralAI features for 7 days without adding a card. The trial is available once per account and does not start a paid subscription.",
+    ],
+    [
+        "How do I pay for a subscription?",
+        "Request a Kaspi invoice in Plan & billing using your Kaspi phone number. We issue the invoice manually and activate your subscription after verifying payment. No automatic charges.",
+    ],
+    [
         "What is FloralAI?",
         "A virtual teammate that answers customer questions using your business information, captures leads and helps with bookings.",
     ],
@@ -399,12 +407,12 @@ const faqs = [
         "FloralAI is designed to stay within the information you provide. When it is unsure, it says so and offers a human handoff.",
     ],
     [
-        "Can my team take over a conversation?",
-        "Absolutely. Conversations that need attention are flagged so a teammate can step in.",
+        "Can I manage Telegram orders on the website?",
+        "Telegram orders appear in your dashboard with customer details, delivery address and order contents. You can start, complete or cancel an order.",
     ],
     [
         "Does it work with WhatsApp?",
-        "WhatsApp and other channel connections are planned integrations. The current demo does not connect to external accounts.",
+        "Telegram is available now. WhatsApp and other channels are planned integrations.",
     ],
 ];
 
@@ -946,7 +954,7 @@ export default function Home() {
                         <br />
                         <span>{t("Grow when you’re ready.")}</span>
                     </h2>
-                    <p>{t("See what works for your business before you pay a thing.")}</p>
+                    <p>{t("Try all available features free for 7 days. No card needed.")}</p>
                     <div className="billing-toggle">
                         <button
                             className={!annualBilling ? "active" : ""}
@@ -966,24 +974,19 @@ export default function Home() {
                 </div>
                 <div className="pricing-grid">
                     <article className="price-card">
-                        <span className="plan-label">{t("A GOOD PLACE TO START")}</span>
-                        <h3>{t("Free")}</h3>
-                        <p>{t("Try FloralAI with a real, working demo.")}</p>
+                        <span className="plan-label">{t("7 DAYS OF FULL ACCESS")}</span>
+                        <h3>{t("Free trial")}</h3>
+                        <p>{t("Set up your business and try every available feature.")}</p>
                         <div className="price">
                             <strong>₸{plans.free.monthlyPriceKzt.toLocaleString(numberLocale)}</strong>
-                            <span>/ {t("month")}</span>
+                            <span>/ {t("7 days")}</span>
                         </div>
                         <Link href="/signup" className="button button-outline price-button">
-                            {t("Start for free")} <ArrowRight size={15} />
+                            {t("Start 7-day trial")} <ArrowRight size={15} />
                         </Link>
                         <div className="price-divider" />
                         <span className="feature-caption">{t("INCLUDED")}</span>
-                        {[
-                            `${plans.free.messageLimit.toLocaleString(numberLocale)} ${t("conversations / month")}`,
-                            `${plans.free.assistantLimit} ${t("AI assistant")}`,
-                            t("Basic business knowledge"),
-                            t("Essential analytics"),
-                        ].map((item) => (
+                        {plans.free.features.map((item) => (
                             <div className="price-feature" key={item}>
                                 <Check size={14} /> {t(item)}
                             </div>
@@ -998,18 +1001,16 @@ export default function Home() {
                             <strong>₸{Math.round(plans.starter.monthlyPriceKzt * (annualBilling ? 1 - annualDiscount : 1)).toLocaleString(numberLocale)}</strong>
                             <span>{annualBilling ? `/ ${t("month, billed yearly")}` : `/ ${t("month")}`}</span>
                         </div>
+                        {annualBilling && <p>{t("Annual invoice total:")} ₸{Math.round(plans.starter.monthlyPriceKzt * (1 - annualDiscount) * 12).toLocaleString(numberLocale)}</p>}
                         <Link
                             href="/signup?plan=starter"
                             className="button button-blue price-button"
                         >
-                            {t("Try Starter free")} <ArrowRight size={15} />
+                            {t("Start 7-day trial")} <ArrowRight size={15} />
                         </Link>
                         <div className="price-divider" />
-                        <span className="feature-caption">{t("EVERYTHING IN FREE, PLUS")}</span>
-                        {[
-                            `${plans.starter.messageLimit.toLocaleString(numberLocale)} ${t("conversations / month")}`,
-                            ...plans.starter.features,
-                        ].map((item) => (
+                        <span className="feature-caption">{t("ALL AVAILABLE FEATURES")}</span>
+                        {plans.starter.features.map((item) => (
                             <div className="price-feature" key={item}>
                                 <Check size={14} /> {t(item)}
                             </div>
@@ -1018,23 +1019,21 @@ export default function Home() {
                     <article className="price-card">
                         <span className="plan-label">{t("FOR A BUSY TEAM")}</span>
                         <h3>{t("Business")}</h3>
-                        <p>{t("More assistants and more ways to grow.")}</p>
+                        <p>{t("FloralAI tools for your growing business.")}</p>
                         <div className="price">
                             <strong>₸{Math.round(plans.business.monthlyPriceKzt * (annualBilling ? 1 - annualDiscount : 1)).toLocaleString(numberLocale)}</strong>
                             <span>{annualBilling ? `/ ${t("month, billed yearly")}` : `/ ${t("month")}`}</span>
                         </div>
+                        {annualBilling && <p>{t("Annual invoice total:")} ₸{Math.round(plans.business.monthlyPriceKzt * (1 - annualDiscount) * 12).toLocaleString(numberLocale)}</p>}
                         <Link
                             href="/signup?plan=business"
                             className="button button-outline price-button"
                         >
-                            {t("Explore Business")} <ArrowRight size={15} />
+                            {t("Start 7-day trial")} <ArrowRight size={15} />
                         </Link>
                         <div className="price-divider" />
-                        <span className="feature-caption">{t("EVERYTHING IN STARTER, PLUS")}</span>
-                        {[
-                            `${plans.business.messageLimit.toLocaleString(numberLocale)} ${t("conversations / month")}`,
-                            ...plans.business.features,
-                        ].map((item) => (
+                        <span className="feature-caption">{t("ALL AVAILABLE FEATURES")}</span>
+                        {plans.business.features.map((item) => (
                             <div className="price-feature" key={item}>
                                 <Check size={14} /> {t(item)}
                             </div>
@@ -1042,7 +1041,7 @@ export default function Home() {
                     </article>
                 </div>
                 <p className="pricing-footnote">
-                    {t("Prices shown in Kazakhstani tenge. Billing is a product preview; payments are not connected yet.")}
+                    {t("Prices in tenge, reduced by 50%. 7 days free. Kaspi invoices are issued and verified manually. No automatic charges.")}
                 </p>
             </section>
 
@@ -1093,7 +1092,7 @@ export default function Home() {
                     {t("Create your AI for free")} <ArrowRight size={16} />
                 </Link>
                 <div className="cta-note">
-                    <Check size={13} /> {t("Start free. No card needed.")}
+                    <Check size={13} /> {t("7 days free. No card needed.")}
                 </div>
             </section>
 

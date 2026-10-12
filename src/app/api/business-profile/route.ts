@@ -28,6 +28,14 @@ export async function PUT(request: Request) {
     if (origin && origin !== new URL(request.url).origin) return NextResponse.json({ error: "Недопустимый источник запроса." }, { status: 403 });
     const auth = await authenticatedClient();
     if (!auth) return NextResponse.json({ error: "Войдите в аккаунт, чтобы сохранить бизнес." }, { status: 401 });
+    const { data: hasAccess, error: accessError } = await auth.client.rpc("has_workspace_access");
+    if (accessError || typeof hasAccess !== "boolean") {
+        return NextResponse.json({ error: "Не удалось проверить доступ. Попробуйте позже." }, { status: 503 });
+    }
+    if (!hasAccess) return NextResponse.json({
+        error: "Пробный период завершён. Оформите подписку в разделе «Тариф и оплата».",
+        code: "SUBSCRIPTION_REQUIRED",
+    }, { status: 402 });
     let body: unknown;
     try {
         const raw = await request.text();

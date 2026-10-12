@@ -189,6 +189,12 @@ export async function POST(request: NextRequest) {
                 await sendTelegramMessage(message.chat.id, "Ссылка магазина недействительна или бот приостановлен. Попросите у магазина новую ссылку.");
                 return NextResponse.json({ ok: true });
             }
+            const access = await admin.rpc("business_has_paid_access", { business_owner: business.owner_id });
+            if (access.error || typeof access.data !== "boolean") throw new Error("Unable to check business subscription");
+            if (!access.data) {
+                await sendTelegramMessage(message.chat.id, "Магазин временно не принимает новые заявки через бота. Свяжитесь с магазином напрямую.");
+                return NextResponse.json({ ok: true });
+            }
             const [profileResult, productResult] = await Promise.all([
                 admin.from("business_profiles").select("profile").eq("owner_id", business.owner_id).maybeSingle(),
                 admin.from("catalog_products").select("id,name,price_kzt,description,image_path")

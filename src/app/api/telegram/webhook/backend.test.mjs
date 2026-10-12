@@ -37,8 +37,8 @@ const profile = {
     deliveryAreas: "Алматы", deliveryFeeKzt: null,
 };
 
-function installContext({ rows = {}, commit, user = { id: owner } } = {}) {
-    const context = { sends: [], media: [], queries: [], commits: [], updates: [], rows, user };
+function installContext({ rows = {}, commit, user = { id: owner }, access = true, accessError = null } = {}) {
+    const context = { sends: [], media: [], queries: [], commits: [], updates: [], rows, user, accessChecks: [] };
     context.admin = {
         auth: { getUser: async () => ({ data: { user: context.user }, error: null }) },
         from(table) {
@@ -84,6 +84,10 @@ function installContext({ rows = {}, commit, user = { id: owner } } = {}) {
             return query;
         },
         async rpc(name, args) {
+            if (name === "business_has_paid_access") {
+                context.accessChecks.push(args);
+                return { data: access, error: accessError };
+            }
             context.commits.push({ name, args });
             return commit ? commit(args, context) : { data: { outcome: "committed", reply: "Заявка сохранена." }, error: null };
         },
@@ -113,6 +117,27 @@ function businessRows(state = emptySalesState()) {
         catalog_products: [{ ...product, owner_id: owner }],
     };
 }
+
+test("expired shop does not receive new Telegram orders or expose its catalog", async () => {
+    const context = installContext({ rows: businessRows(), access: false });
+    const response = await webhook.POST(request("Каталог"));
+    assert.equal(response.status, 200);
+    assert.deepEqual(context.accessChecks, [{ business_owner: owner }]);
+    assert.equal(context.commits.length, 0);
+    assert.equal(context.media.length, 0);
+    assert.equal(context.queries.some((query) => query.table === "catalog_products"), false);
+    assert.match(context.sends[0].text, /временно не принимает/);
+});
+
+test("Telegram subscription check fails closed without a sales commit or success reply", async () => {
+    for (const options of [{ accessError: { code: "08006" } }, { access: null }]) {
+        const context = installContext({ rows: businessRows(), ...options });
+        const response = await webhook.POST(request("Подтверждаю"));
+        assert.equal(response.status, 503);
+        assert.equal(context.commits.length, 0);
+        assert.equal(context.sends.length, 0);
+    }
+});
 
 function photoRows(count = 1) {
     const rows = businessRows();

@@ -80,6 +80,16 @@ export function useWorkspaceSession() {
                 let storedBusiness: BusinessProfile | null = null;
                 let profileError: string | undefined;
                 try {
+                    const requestedPlan = new URLSearchParams(window.location.search).get("plan");
+                    const trial = await fetch("/api/billing/trial", {
+                        method: "POST", headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ plan: requestedPlan === "business" ? "business" : "starter" }),
+                    });
+                    if (!trial.ok) throw new Error("Не удалось проверить пробный доступ. Обновите страницу или откройте «Тариф и оплата».");
+                } catch {
+                    profileError = "Не удалось проверить пробный доступ. Обновите страницу или откройте «Тариф и оплата».";
+                }
+                try {
                     const response = await fetch("/api/business-profile", { cache: "no-store" });
                     const result = await response.json() as { profile?: BusinessProfile | null; error?: string };
                     if (!response.ok) throw new Error(result.error ?? "Не удалось загрузить профиль бизнеса.");

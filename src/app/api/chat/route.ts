@@ -12,6 +12,14 @@ export async function POST(request: Request) {
     if (!client) return NextResponse.json({ error: "Войдите в аккаунт для проверки ассистента." }, { status: 401 });
     const { data: userData, error: authError } = await client.auth.getUser();
     if (authError || !userData.user) return NextResponse.json({ error: "Войдите в аккаунт для проверки ассистента." }, { status: 401 });
+    const { data: hasAccess, error: accessError } = await client.rpc("has_workspace_access");
+    if (accessError || typeof hasAccess !== "boolean") {
+        return NextResponse.json({ error: "Не удалось проверить доступ. Попробуйте позже." }, { status: 503 });
+    }
+    if (!hasAccess) return NextResponse.json({
+        error: "Пробный период завершён. Оформите подписку в разделе «Тариф и оплата».",
+        code: "SUBSCRIPTION_REQUIRED",
+    }, { status: 402 });
     let payload: unknown;
     try {
         const raw = await request.text();
