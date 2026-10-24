@@ -9,6 +9,12 @@ export const localeNames: Record<Locale, string> = {
 };
 
 const translations: Record<string, Partial<Record<Locale, string>>> = {
+    "Theme": { ru: "Тема", kk: "Тақырып" },
+    "Switch to light theme": { ru: "Включить светлую тему", kk: "Ашық тақырыпқа ауысу" },
+    "Switch to dark theme": { ru: "Включить тёмную тему", kk: "Қараңғы тақырыпқа ауысу" },
+    "Please wait…": { ru: "Подождите…", kk: "Күте тұрыңыз…" },
+    "The request timed out. Please try again.": { ru: "Сервер не ответил вовремя. Попробуйте ещё раз.", kk: "Сервер уақытында жауап бермеді. Қайталап көріңіз." },
+    "Scripted demo · no real bookings": { ru: "Демо по сценарию · без реальных записей", kk: "Сценарийлі демо · нақты жазылу жасалмайды" },
     "Loading...": { ru: "Загрузка...", kk: "Жүктелуде..." },
     CONNECTED: { ru: "ПОДКЛЮЧЕНО", kk: "ҚОСЫЛҒАН" },
     AI: { ru: "ИИ", kk: "ЖИ" },

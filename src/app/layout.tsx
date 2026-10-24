@@ -2,9 +2,12 @@ import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import type { ReactNode } from "react";
 import { LanguageProvider } from "@/components/language-provider";
+import { ThemeProvider } from "@/components/theme-provider";
+import { themeInitScript } from "@/lib/theme";
 import { defaultLocale, translate } from "@/lib/i18n";
 import "./globals.css";
 import "./product.css";
+import "./themes.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -38,12 +41,17 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html
+      suppressHydrationWarning
+      data-theme="light"
       lang={defaultLocale}
       data-scroll-behavior="smooth"
       className={`${geistSans.variable} h-full antialiased`}
     >
+      <head>
+        <script id="floralai-theme" dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+      </head>
       <body className="min-h-full flex flex-col">
-        <LanguageProvider>{children}</LanguageProvider>
+        <ThemeProvider><LanguageProvider>{children}</LanguageProvider></ThemeProvider>
       </body>
     </html>
   );

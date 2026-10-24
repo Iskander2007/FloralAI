@@ -4,7 +4,9 @@ import { ArrowLeft, ArrowRight, Flower2, RotateCcw, Send, Sparkles } from "lucid
 import Link from "next/link";
 import { FormEvent, useState } from "react";
 import { useLanguage } from "@/components/language-provider";
-import { LanguageSwitcher } from "@/components/language-switcher";
+import { AppearanceControls } from "@/components/appearance-controls";
+import { fetchWithTimeout } from "@/lib/fetch-with-timeout";
+import { translateError } from "@/lib/i18n";
 import {
     emptyFlowerOrder,
     flowerProductDescription,
@@ -43,7 +45,7 @@ export default function FlowerShopPage() {
         setBusy(true);
 
         try {
-            const response = await fetch("/api/flower-assistant", {
+            const response = await fetchWithTimeout("/api/flower-assistant", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ message, step, draft, idempotencyKey: key, locale }),
@@ -64,11 +66,8 @@ export default function FlowerShopPage() {
             setStep(result.step);
             setDraft(result.draft);
         } catch (requestError) {
-            setError(
-                requestError instanceof Error
-                    ? requestError.message
-                    : t("Could not reach the server. Please try again."),
-            );
+            setInput((current) => current || message);
+            setError(translateError(locale, requestError, "Could not reach the server. Please try again."));
         } finally {
             setBusy(false);
         }
@@ -90,7 +89,7 @@ export default function FlowerShopPage() {
                     <ArrowLeft size={16} /> <span translate="no">FloralAI</span>
                 </Link>
                 <span className="flower-demo-badge"><i /> {t("FLOWER SHOP DEMO")}</span>
-                <LanguageSwitcher />
+                <AppearanceControls />
             </header>
 
             <div className="flower-layout">

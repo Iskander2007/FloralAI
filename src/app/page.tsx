@@ -22,8 +22,8 @@ import {
 import Link from "next/link";
 import { annualDiscount, plans } from "@/lib/plans";
 import { useLanguage } from "@/components/language-provider";
-import { LanguageSwitcher } from "@/components/language-switcher";
-import { FormEvent, useMemo, useState } from "react";
+import { AppearanceControls } from "@/components/appearance-controls";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import "./floral-theme.css";
 
 type BusinessKey = "salon" | "restaurant" | "clinic" | "shop" | "auto";
@@ -201,28 +201,56 @@ function ChatDemo({
 }) {
     const { t } = useLanguage();
     const [business, setBusiness] = useState<BusinessKey>(initialBusiness);
-    const [messages, setMessages] = useState<ChatMessage[]>([]);
-    const [input, setInput] = useState("");
-    const [typing, setTyping] = useState(false);
+    const [sessions, setSessions] = useState<Partial<Record<BusinessKey, {
+        messages: ChatMessage[];
+        input: string;
+        typing: boolean;
+    }>>>({});
+    const timers = useRef(new Set<number>());
+    const pending = useRef(new Set<BusinessKey>());
+    const transcript = useRef<HTMLDivElement>(null);
+    const messages = sessions[business]?.messages ?? [];
+    const input = sessions[business]?.input ?? "";
+    const typing = sessions[business]?.typing ?? false;
     const profile = businesses[business];
-    const visibleMessages = useMemo(() => messages.slice(-5), [messages]);
+
+    useEffect(() => {
+        const activeTimers = timers.current;
+        return () => activeTimers.forEach((timer) => window.clearTimeout(timer));
+    }, []);
+
+    useEffect(() => {
+        if (transcript.current) transcript.current.scrollTop = transcript.current.scrollHeight;
+    }, [business, messages.length, typing]);
 
     function sendMessage(value: string, intent = value) {
         const clean = value.trim();
-        if (!clean || typing) return;
-        setInput("");
-        setMessages((current) => [
+        if (!clean || pending.current.has(business)) return;
+        pending.current.add(business);
+        setSessions((current) => ({
             ...current,
-            { role: "customer", content: clean },
-        ]);
-        setTyping(true);
-        window.setTimeout(() => {
-            setMessages((current) => [
+            [business]: {
+                input: "",
+                typing: true,
+                messages: [...(current[business]?.messages ?? []), { role: "customer", content: clean }],
+            },
+        }));
+        const timer = window.setTimeout(() => {
+            // The reply belongs to the business that received the message,
+            // even when another tab is selected while it is being prepared.
+            setSessions((current) => ({
                 ...current,
-                { role: "assistant", content: replyFor(business, intent) },
-            ]);
-            setTyping(false);
+                [business]: {
+                    ...current[business],
+                    input: current[business]?.input ?? "",
+                    typing: false,
+                    messages: [...(current[business]?.messages ?? []), { role: "assistant", content: replyFor(business, intent) }],
+                },
+            }));
+            pending.current.delete(business);
+            timers.current.delete(timer);
         }, 650);
+        timers.current.add(timer);
     }
 
     function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -256,10 +284,7 @@ function ChatDemo({
                         key={key}
                         className={business === key ? "selected" : ""}
                         aria-pressed={business === key}
-                        onClick={() => {
-                            setBusiness(key);
-                            setMessages([]);
-                        }}
+                        onClick={() => setBusiness(key)}
                         type="button"
                     >
                         {t(businesses[key].label)}
@@ -267,6 +292,7 @@ function ChatDemo({
                 ))}
             </div>
             <div
+                ref={transcript}
                 className="chat-transcript"
                 role="log"
                 aria-label={t("Conversation")}
@@ -280,7 +306,7 @@ function ChatDemo({
                         <span className="message-time">10:42</span>
                     </div>
                 </div>
-                {visibleMessages.map((message, index) => (
+                {messages.map((message, index) => (
                     <div
                         key={`${message.role}-${index}`}
                         className={`message-row ${message.role === "customer" ? "customer-row" : ""}`}
@@ -336,7 +362,18 @@ function ChatDemo({
                     aria-label={t("Message the AI assistant")}
                     placeholder={t("Write a message...")}
                     value={input}
-                    onChange={(event) => setInput(event.target.value)}
+                    maxLength={500}
+                    onChange={(event) => {
+                        const value = event.target.value;
+                        setSessions((current) => ({
+                            ...current,
+                            [business]: {
+                                messages: current[business]?.messages ?? [],
+                                typing: current[business]?.typing ?? false,
+                                input: value,
+                            },
+                        }));
+                    }}
                 />
                 <button
                     aria-label={t("Send message")}
@@ -348,7 +385,7 @@ function ChatDemo({
             </form>
             <div className="chat-footnote">
                 {t("Powered by")} <strong translate="no">FloralAI</strong>{" "}
-                <span>{t("Preview demo")}</span>
+                <span>{t("Scripted demo · no real bookings")}</span>
             </div>
         </div>
     );
@@ -424,6 +461,18 @@ export default function Home() {
     const [openFaq, setOpenFaq] = useState<number | null>(0);
     const [demoOpen, setDemoOpen] = useState(false);
     const [annualBilling, setAnnualBilling] = useState(false);
+    const menuButton = useRef<HTMLButtonElement>(null);
+
+    useEffect(() => {
+        if (!menuOpen) return;
+        function closeMenu(event: KeyboardEvent) {
+            if (event.key !== "Escape") return;
+            setMenuOpen(false);
+            menuButton.current?.focus();
+        }
+        document.addEventListener("keydown", closeMenu);
+        return () => document.removeEventListener("keydown", closeMenu);
+    }, [menuOpen]);
 
     return (
         <main className="floral-site">
@@ -431,6 +480,7 @@ export default function Home() {
                 <div className="header-inner">
                     <Brand />
                     <nav
+                        id="main-navigation"
                         className={menuOpen ? "nav-open" : ""}
                         aria-label={t("Main navigation")}
                     >
@@ -453,34 +503,39 @@ export default function Home() {
                             {t("FAQ")}
                         </a>
                         <div className="mobile-nav-actions">
-                            <Link href="/login" className="nav-login">
+                            <Link href="/login" className="nav-login" onClick={() => setMenuOpen(false)}>
                                 {t("Log in")}
                             </Link>
-                            <Link href="/signup" className="button button-dark">
+                            <Link href="/signup" className="button button-dark" onClick={() => setMenuOpen(false)}>
                                 {t("Try for free")} <ArrowRight size={15} />
                             </Link>
                         </div>
                     </nav>
-                    <div className="header-actions">
-                        <LanguageSwitcher />
-                        <Link href="/login" className="nav-login">
-                            {t("Log in")}
-                        </Link>
+                    <div className="header-tools">
+                        <AppearanceControls />
+                        <div className="header-actions">
+                            <Link href="/login" className="nav-login">
+                                {t("Log in")}
+                            </Link>
+                            <button
+                                className="button button-dark button-small"
+                                onClick={() => setDemoOpen(true)}
+                            >
+                                {t("Try for free")} <ArrowRight size={15} />
+                            </button>
+                        </div>
                         <button
-                            className="button button-dark button-small"
-                            onClick={() => setDemoOpen(true)}
+                            ref={menuButton}
+                            className="mobile-menu"
+                            type="button"
+                            onClick={() => setMenuOpen((open) => !open)}
+                            aria-label={t(menuOpen ? "Close menu" : "Open menu")}
+                            aria-expanded={menuOpen}
+                            aria-controls="main-navigation"
                         >
-                            {t("Try for free")} <ArrowRight size={15} />
+                            {menuOpen ? <X /> : <Menu />}
                         </button>
                     </div>
-                    <button
-                        className="mobile-menu"
-                        onClick={() => setMenuOpen((open) => !open)}
-                        aria-label={t(menuOpen ? "Close menu" : "Open menu")}
-                        aria-expanded={menuOpen}
-                    >
-                        {menuOpen ? <X /> : <Menu />}
-                    </button>
                 </div>
             </header>
 

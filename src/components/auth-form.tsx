@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 import { useLanguage } from "@/components/language-provider";
-import { LanguageSwitcher } from "@/components/language-switcher";
+import { AppearanceControls } from "@/components/appearance-controls";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { translateError } from "@/lib/i18n";
 import { readWorkspace, writeWorkspace } from "@/lib/workspace";
@@ -49,7 +49,7 @@ export function AuthForm({
     }, [resendCountdown]);
 
     async function requestCode() {
-        if (!supabase) return;
+        if (!supabase || busy) return;
         setError("");
         setNotice("");
         setBusy(true);
@@ -76,6 +76,7 @@ export function AuthForm({
 
     async function handleSubmit(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
+        if (busy) return;
         setError("");
         setNotice("");
 
@@ -183,7 +184,7 @@ export function AuthForm({
             </Link>
             <section className="auth-card">
                 <div className="auth-language">
-                    <LanguageSwitcher />
+                    <AppearanceControls />
                 </div>
                 <Link href="/" className="brand auth-brand">
                     <span className="brand-mark">
@@ -215,7 +216,7 @@ export function AuthForm({
                         )}
                     </p>
                 )}
-                <form className="auth-form" onSubmit={handleSubmit}>
+                <form className="auth-form" onSubmit={handleSubmit} aria-busy={busy}>
                     <label htmlFor="email">{t("Work email")}</label>
                     <input
                         id="email"
@@ -223,7 +224,7 @@ export function AuthForm({
                         autoComplete="email"
                         placeholder="you@yourbusiness.com"
                         required
-                        readOnly={authConfigured && codeRequested}
+                        readOnly={busy || (authConfigured && codeRequested)}
                         value={email}
                         onChange={(event) => setEmail(event.target.value)}
                     />
@@ -231,6 +232,7 @@ export function AuthForm({
                         <button
                             className="auth-code-change"
                             type="button"
+                            disabled={busy}
                             onClick={() => {
                                 setCodeRequested(false);
                                 setCode("");
@@ -255,6 +257,7 @@ export function AuthForm({
                                     maxLength={6}
                                     placeholder="123456"
                                     required
+                                    disabled={busy}
                                     value={code}
                                     onChange={(event) =>
                                         setCode(event.target.value.replace(/\D/g, "").slice(0, 6))
@@ -293,7 +296,9 @@ export function AuthForm({
                 )}
                 <button className="button button-blue auth-submit" type="submit" disabled={busy}>
                     {t(
-                            authConfigured
+                            busy
+                                ? "Please wait…"
+                                : authConfigured
                                 ? codeRequested
                                     ? "Verify code and continue"
                                     : "Send me a sign-in code"

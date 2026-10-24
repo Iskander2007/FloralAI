@@ -35,7 +35,15 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
+    // Public pages must render without depending on the Auth service.
+    // Protected handlers still verify the user independently of this refresh.
     matcher: [
-        "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+        "/dashboard/:path*",
+        "/onboarding/:path*",
+        "/api/business-profile/:path*",
+        "/api/chat/:path*",
+        "/api/orders/:path*",
+        "/api/billing/:path*",
+        "/api/telegram/setup/:path*",
     ],
 };

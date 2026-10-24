@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { BusinessProfileEditor } from "@/components/business-profile-editor";
+import { AppearanceControls } from "@/components/appearance-controls";
 import { useWorkspaceSession, writeWorkspace } from "@/lib/workspace";
 import type { BusinessProfile } from "@/lib/business";
 import "../floral-theme.css";
@@ -29,6 +30,7 @@ export default function OnboardingPage() {
 
     if (saved) return (
         <main className="setup-page setup-success">
+            <AppearanceControls />
             <div className="setup-success-mark"><Check size={26} /></div>
             <h1>Магазин настроен</h1><p>Теперь добавьте букеты с фото и ценами, затем подключите Telegram. Клиенты смогут выбрать цветы и оставить заявку.</p>
             <button type="button" className="button button-blue" onClick={() => router.push("/dashboard?view=catalog")}>Добавить букеты <ArrowRight size={15} /></button>
@@ -38,7 +40,10 @@ export default function OnboardingPage() {
 
     return (
         <main className="setup-page setup-quick-page">
-            <header className="setup-header"><Link href="/" className="brand"><span className="brand-mark"><Flower2 size={20} /></span>FloralAI</Link><Link href="/dashboard" className="business-text-button">В кабинет</Link></header>
+            <header className="setup-header">
+                <Link href="/" className="brand"><span className="brand-mark"><Flower2 size={20} /></span>FloralAI</Link>
+                <div className="setup-header-actions"><AppearanceControls /><Link href="/dashboard" className="business-text-button">В кабинет</Link></div>
+            </header>
             <div className="setup-layout">
                 <aside className="setup-aside"><div className="setup-aside-mark"><Flower2 size={28} /></div><h2>Меньше текста.<br /><span>Больше цветов.</span></h2><p>Название магазина, подходящий шаблон и несколько вариантов — ваш помощник готов знакомиться с клиентами.</p><div className="quick-setup-checklist"><span><Check size={16} /> Готовое описание магазина</span><span><Check size={16} /> Услуги и доставка кнопками</span><span><Check size={16} /> Любой текст можно изменить</span></div></aside>
                 <section className="setup-main"><BusinessProfileEditor profile={workspace.business ?? emptyBusiness} submitLabel="Сохранить и перейти к букетам" onSaved={(profile) => { writeWorkspace({ ...workspace, business: profile, assistantPublished: false }); setSaved(true); }} /></section>

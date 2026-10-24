@@ -31,7 +31,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState, useSyncExternalStore } from "react";
 import { useLanguage } from "@/components/language-provider";
-import { LanguageSwitcher } from "@/components/language-switcher";
+import { AppearanceControls } from "@/components/appearance-controls";
 import {
     clearWorkspace,
     DemoWorkspace,
@@ -457,7 +457,7 @@ export default function DashboardPage() {
                         <b>{t(active.label)}</b>
                     </div>
                     <div className="topbar-actions">
-                        <LanguageSwitcher />
+                        <AppearanceControls />
                         <span className="preview-pill">
                             <i /> Рабочий кабинет
                         </span>

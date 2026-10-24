@@ -1,0 +1,238 @@
+/* Shared palette for the landing page, authentication, workspace and demos. */
+:root {
+    color-scheme: light;
+    --theme-page: #ffffff;
+    --theme-panel: #ffffff;
+    --theme-raised: #f3f6f0;
+    --theme-inset: #f7f9f5;
+    --theme-text: #1c291e;
+    --theme-secondary: #465849;
+    --theme-muted: #617265;
+    --theme-line: #d8e1d5;
+    --theme-line-strong: #a4b79d;
+    --theme-accent: #365f1b;
+    --theme-accent-hover: #284b12;
+    --theme-accent-end: #527d2b;
+    --theme-on-accent: #ffffff;
+    --theme-accent-soft: #eaf3e1;
+    --theme-accent-line: #a4c48b;
+    --theme-danger: #ab352a;
+    --theme-danger-soft: #fff0ed;
+    --theme-warning: #805800;
+    --theme-warning-soft: #fff6df;
+    --theme-header: #fffffff0;
+    --theme-wash: #213a1708;
+    --theme-shadow: #172c1814;
+    --theme-green-glow: #dcf0ce55;
+    --theme-rose-glow: #f7e8e94d;
+    --theme-overlay: #132014b3;
+}
+
+:root[data-theme="dark"] {
+    color-scheme: dark;
+    --theme-page: #090d0b;
+    --theme-panel: #111815;
+    --theme-raised: #1a241d;
+    --theme-inset: #0d130f;
+    --theme-text: #f0f5ef;
+    --theme-secondary: #bac7bd;
+    --theme-muted: #9eafa2;
+    --theme-line: #314035;
+    --theme-line-strong: #536b50;
+    --theme-accent: #c7f36b;
+    --theme-accent-hover: #d6ff8b;
+    --theme-accent-end: #87b942;
+    --theme-on-accent: #10160c;
+    --theme-accent-soft: #c7f36b17;
+    --theme-accent-line: #c7f36b55;
+    --theme-danger: #ffb1a5;
+    --theme-danger-soft: #f0785f14;
+    --theme-warning: #e6c874;
+    --theme-warning-soft: #e6c87412;
+    --theme-header: #0d130ff0;
+    --theme-wash: #ffffff08;
+    --theme-shadow: #00000055;
+    --theme-green-glow: #2935236b;
+    --theme-rose-glow: #34232946;
+    --theme-overlay: #000b;
+}
+
+html,
+:root body {
+    background-color: var(--theme-page);
+    color: var(--theme-text);
+}
+
+.appearance-controls,
+.header-tools,
+.setup-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+.theme-toggle {
+    display: inline-flex;
+    min-width: 40px;
+    height: 40px;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 0 12px;
+    flex-shrink: 0;
+    border: 1px solid var(--theme-accent-line);
+    border-radius: 10px;
+    background: var(--theme-accent-soft);
+    color: var(--theme-accent);
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: border-color .15s ease, background-color .15s ease;
+}
+
+.theme-toggle:hover {
+    border-color: var(--theme-accent);
+    background: var(--theme-raised);
+}
+
+.theme-toggle:focus-visible {
+    outline: 3px solid var(--theme-accent);
+    outline-offset: 3px;
+}
+
+.theme-icon-light,
+:root[data-theme="dark"] .theme-icon-dark {
+    display: none;
+}
+
+:root[data-theme="dark"] .theme-icon-light {
+    display: block;
+}
+
+.header-tools {
+    gap: 18px;
+}
+
+.chat-footnote {
+    height: auto;
+    min-height: 31px;
+    padding: 6px 12px;
+    flex-wrap: wrap;
+    gap: 4px;
+    text-align: center;
+}
+
+.chat-footnote > span {
+    position: static;
+    flex-basis: 100%;
+}
+
+.floral-site .header-inner {
+    max-width: 1400px;
+    gap: 20px;
+}
+
+.setup-success > .appearance-controls {
+    position: absolute;
+    top: 24px;
+    right: 24px;
+}
+
+@media (max-width: 1080px) {
+    .header-tools {
+        gap: 10px;
+    }
+}
+
+@media (max-width: 1180px) {
+    .floral-site .header-actions {
+        display: none;
+    }
+}
+
+@media (max-width: 640px) {
+    .flower-header {
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+
+    .flower-header .flower-demo-badge {
+        order: 3;
+        flex-basis: 100%;
+    }
+
+    .appearance-controls {
+        gap: 6px;
+    }
+
+    .theme-toggle {
+        width: 38px;
+        min-width: 38px;
+        height: 38px;
+        padding: 0;
+    }
+
+    .theme-toggle-label {
+        display: none;
+    }
+
+    .appearance-controls .language-switcher {
+        min-height: 38px;
+        padding: 0 7px;
+        gap: 3px;
+    }
+
+    .appearance-controls .language-switcher > svg {
+        display: none;
+    }
+
+    .appearance-controls .language-switcher select {
+        max-width: 83px;
+        font-size: 11px;
+    }
+
+    .setup-header-actions {
+        gap: 8px;
+    }
+
+    .setup-page .setup-header {
+        flex-wrap: wrap;
+        height: auto;
+        min-height: 74px;
+        padding-block: 14px;
+        gap: 14px;
+    }
+}
+
+@media (max-width: 380px) {
+    .floral-site .site-header .brand {
+        gap: 7px;
+        font-size: 19px;
+    }
+
+    .floral-site .site-header .brand-mark {
+        width: 30px;
+        height: 30px;
+    }
+
+    .header-tools {
+        gap: 6px;
+    }
+
+    .appearance-controls .language-switcher select {
+        max-width: 65px;
+    }
+
+    .floral-site .site-header .header-inner {
+        padding-inline: 12px;
+        gap: 6px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .theme-toggle {
+        transition: none;
+    }
+}
