@@ -9,6 +9,10 @@ const transpile = (source) => ts.transpileModule(source, {
 }).outputText;
 const businessUrl = moduleUrl(transpile(await readFile(new URL("../../../../lib/business.ts", import.meta.url), "utf8")));
 const salesUrl = moduleUrl(transpile(await readFile(new URL("../../../../lib/sales-assistant.ts", import.meta.url), "utf8")));
+const aiUrl = moduleUrl(transpile(await readFile(new URL("../../../../lib/ai.ts", import.meta.url), "utf8")));
+const telegramUrl = moduleUrl(transpile(await readFile(new URL("../../../../lib/telegram.ts", import.meta.url), "utf8")));
+const consultantUrl = moduleUrl(transpile(await readFile(new URL("../../../../lib/telegram-assistant.ts", import.meta.url), "utf8"))
+    .replaceAll('"@/lib/ai"', JSON.stringify(aiUrl)).replaceAll('"@/lib/sales-assistant"', JSON.stringify(salesUrl)));
 const nextUrl = moduleUrl("export const NextResponse = {json: (body, init) => new Response(JSON.stringify(body), {...init, headers: {'content-type': 'application/json', ...init?.headers}})};");
 const adminUrl = moduleUrl("export const createSupabaseAdminClient = () => globalThis.__floralBackendTest.admin;");
 const serverUrl = moduleUrl("export const createSupabaseServerClient = async () => globalThis.__floralBackendTest.admin;");
@@ -16,6 +20,8 @@ const webhookSource = transpile(await readFile(new URL("./route.ts", import.meta
     .replaceAll('"next/server"', JSON.stringify(nextUrl))
     .replaceAll('"@/lib/business"', JSON.stringify(businessUrl))
     .replaceAll('"@/lib/sales-assistant"', JSON.stringify(salesUrl))
+    .replaceAll('"@/lib/telegram-assistant"', JSON.stringify(consultantUrl))
+    .replaceAll('"@/lib/telegram"', JSON.stringify(telegramUrl))
     .replaceAll('"@/lib/supabase/admin"', JSON.stringify(adminUrl));
 const orderSource = transpile(await readFile(new URL("../../orders/route.ts", import.meta.url), "utf8"))
     .replaceAll('"next/server"', JSON.stringify(nextUrl))
@@ -23,10 +29,13 @@ const orderSource = transpile(await readFile(new URL("../../orders/route.ts", im
 const webhook = await import(moduleUrl(webhookSource));
 const orderApi = await import(moduleUrl(orderSource));
 const { emptySalesState, runSalesTurn } = await import(salesUrl);
+const { encryptTelegramToken, personalTelegramSecret } = await import(telegramUrl);
 const originalFetch = globalThis.fetch;
 const originalToken = process.env.TELEGRAM_BOT_TOKEN;
 const originalSecret = process.env.TELEGRAM_WEBHOOK_SECRET;
 const originalSupabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const originalEncryptionKey = process.env.TELEGRAM_TOKEN_ENCRYPTION_KEY;
+const originalMock = process.env.USE_MOCK_AI;
 
 const owner = "10000000-0000-4000-8000-000000000001";
 const businessId = "20000000-0000-4000-8000-000000000001";
@@ -64,7 +73,7 @@ function installContext({ rows = {}, commit, user = { id: owner }, access = true
                 then(resolve, reject) {
                     context.queries.push({ table, filters: [...filters], ordering: [...ordering], rowLimit, cursorFilter, update });
                     const tableRows = typeof context.rows[table] === "function" ? context.rows[table]() : (context.rows[table] ?? []);
-                    const result = tableRows.filter((row) => filters.every(([column, value]) => String(row[column]) === String(value)))
+                    const result = tableRows.filter((row) => filters.every(([column, value]) => String(row[column] ?? (column === "bot_id" ? 0 : undefined)) === String(value)))
                         .filter((row) => !cursorFilter || row.created_at < cursorFilter.created_at
                             || (row.created_at === cursorFilter.created_at && row.id < cursorFilter.id))
                         .map((row) => {
@@ -213,6 +222,8 @@ beforeEach(() => {
     process.env.TELEGRAM_BOT_TOKEN = "unit-test-token";
     process.env.TELEGRAM_WEBHOOK_SECRET = "unit-test-secret";
     process.env.NEXT_PUBLIC_SUPABASE_URL = "https://unit-test.supabase.co";
+    process.env.TELEGRAM_TOKEN_ENCRYPTION_KEY = "ab".repeat(32);
+    process.env.USE_MOCK_AI = "true";
 });
 after(() => {
     globalThis.fetch = originalFetch;
@@ -220,6 +231,58 @@ after(() => {
     if (originalToken === undefined) delete process.env.TELEGRAM_BOT_TOKEN; else process.env.TELEGRAM_BOT_TOKEN = originalToken;
     if (originalSecret === undefined) delete process.env.TELEGRAM_WEBHOOK_SECRET; else process.env.TELEGRAM_WEBHOOK_SECRET = originalSecret;
     if (originalSupabaseUrl === undefined) delete process.env.NEXT_PUBLIC_SUPABASE_URL; else process.env.NEXT_PUBLIC_SUPABASE_URL = originalSupabaseUrl;
+    if (originalEncryptionKey === undefined) delete process.env.TELEGRAM_TOKEN_ENCRYPTION_KEY; else process.env.TELEGRAM_TOKEN_ENCRYPTION_KEY = originalEncryptionKey;
+    if (originalMock === undefined) delete process.env.USE_MOCK_AI; else process.env.USE_MOCK_AI = originalMock;
+});
+
+test("personal bots isolate the same customer and update ID, and use only their own token", async () => {
+    const otherOwner = "10000000-0000-4000-8000-000000000002";
+    const otherBusiness = "20000000-0000-4000-8000-000000000002";
+    const key = process.env.TELEGRAM_TOKEN_ENCRYPTION_KEY;
+    const rows = businessRows();
+    rows.telegram_businesses.push({ id: otherBusiness, owner_id: otherOwner, business_name: "Другой магазин", active: true });
+    rows.business_profiles.push({ owner_id: otherOwner, profile: { ...profile, name: "Другой магазин" } });
+    rows.telegram_bot_credentials = [
+        { bot_id: 12345, owner_id: owner, business_id: businessId, encrypted_token: encryptTelegramToken("first-personal-token", key, `${owner}:12345`) },
+        { bot_id: 67890, owner_id: otherOwner, business_id: otherBusiness, encrypted_token: encryptTelegramToken("second-personal-token", key, `${otherOwner}:67890`) },
+    ];
+    rows.telegram_chats.push({ chat_id: 555, bot_id: 12345, business_id: businessId, last_update_id: 11, revision: 1, state: emptySalesState() });
+    rows.telegram_chats.push({ chat_id: 555, bot_id: 67890, business_id: otherBusiness, last_update_id: 11, revision: 1, state: emptySalesState() });
+    const context = installContext({ rows, commit: (args) => ({ data: { outcome: "committed", reply: args.p_reply }, error: null }) });
+    const urls = [];
+    globalThis.fetch = async (url, options) => { urls.push(String(url)); context.sends.push(JSON.parse(options.body)); return Response.json({ ok: true }); };
+    for (const [id, merchant] of [[12345, owner], [67890, otherOwner]]) {
+        const incoming = new Request(`https://floral.example/api/telegram/webhook?bot=${id}`, {
+            method: "POST", headers: { "x-telegram-bot-api-secret-token": personalTelegramSecret(key, merchant, id) },
+            body: JSON.stringify({ update_id: 12, message: { chat: { id: 555, type: "private" }, text: "/start" } }),
+        });
+        assert.equal((await webhook.POST(incoming)).status, 200);
+    }
+    assert.match(urls[0], /botfirst-personal-token/);
+    assert.match(urls[1], /botsecond-personal-token/);
+    assert.match(context.sends[0].text, /«Цветы»/);
+    assert.match(context.sends[1].text, /«Другой магазин»/);
+    assert.deepEqual(context.commits.map(({ args }) => [args.p_bot_id, args.p_business_id]), [[12345, businessId], [67890, otherBusiness]]);
+    assert.ok(context.queries.filter((q) => q.table === "telegram_chats").every((q) => q.filters.some(([field]) => field === "bot_id")));
+});
+
+test("a shared webhook secret cannot authorize a personal bot and does not read conversations", async () => {
+    const context = installContext({ rows: { telegram_bot_credentials: [{ bot_id: 12345, owner_id: owner, business_id: businessId, encrypted_token: "unused" }] } });
+    const incoming = new Request("https://floral.example/api/telegram/webhook?bot=12345", {
+        method: "POST", headers: { "x-telegram-bot-api-secret-token": "unit-test-secret" }, body: "{}",
+    });
+    assert.equal((await webhook.POST(incoming)).status, 401);
+    assert.deepEqual(context.queries.map((q) => q.table), ["telegram_bot_credentials"]);
+    assert.equal(context.sends.length, 0);
+});
+
+test("changing shops starts a clean assistant history and never forwards another shop's private draft", async () => {
+    const rows = businessRows({ ...emptySalesState(), assistantHistory: [{ role: "user", content: "private phone 777" }] });
+    rows.telegram_chats[0].business_id = "different-shop";
+    const context = installContext({ rows, commit: (args) => ({ data: { outcome: "committed", reply: args.p_reply }, error: null }) });
+    assert.equal((await webhook.POST(request(`/start ${"a".repeat(32)}`))).status, 200);
+    assert.equal(context.commits[0].args.p_state.assistantHistory.length, 2);
+    assert.doesNotMatch(JSON.stringify(context.commits[0].args.p_state), /private phone/);
 });
 
 test("rejects an incorrect webhook secret before accessing storage or Telegram", async () => {

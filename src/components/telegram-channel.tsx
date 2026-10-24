@@ -22,6 +22,11 @@ export function TelegramChannel({ businessName }: { businessName: string }) {
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState("");
     const [notice, setNotice] = useState("");
+    const [mode, setMode] = useState<"personal" | "shared">("personal");
+    const [token, setToken] = useState("");
+    const [personalUsername, setPersonalUsername] = useState("");
+    const [personalEnabled, setPersonalEnabled] = useState(false);
+    const [aiEnabled, setAiEnabled] = useState(false);
 
     useEffect(() => {
         let cancelled = false;
@@ -47,6 +52,20 @@ export function TelegramChannel({ businessName }: { businessName: string }) {
                 if (queryError) throw queryError;
                 if (!cancelled) setSetup(data as TelegramBusiness | null);
 
+                const personalResponse = await fetch("/api/telegram/connect", { cache: "no-store" });
+                const personal = await personalResponse.json() as { connection?: { username: string } | null; personalEnabled?: boolean; aiEnabled?: boolean; error?: string };
+                if (!personalResponse.ok) throw new Error(personal.error ?? "Не удалось загрузить личного бота.");
+                if (!cancelled) {
+                    setPersonalEnabled(personal.personalEnabled === true);
+                    setAiEnabled(personal.aiEnabled === true);
+                    if (personal.connection) {
+                        setPersonalUsername(personal.connection.username);
+                        setBotUsername(personal.connection.username);
+                        return;
+                    }
+                    if (data) setMode("shared");
+                }
+
                 const configResponse = await fetch("/api/telegram/setup", {
                     cache: "no-store",
                 });
@@ -56,8 +75,6 @@ export function TelegramChannel({ businessName }: { businessName: string }) {
                 };
                 if (configResponse.ok && config.username && !cancelled) {
                     setBotUsername(config.username);
-                } else if (!configResponse.ok && !cancelled) {
-                    setError(translateError(locale, config.error, "Telegram bot is not configured on the server yet."));
                 }
             } catch (loadError) {
                 if (!cancelled) {
@@ -86,6 +103,23 @@ export function TelegramChannel({ businessName }: { businessName: string }) {
             return;
         }
         try {
+            if (mode === "personal") {
+                const response = await fetch("/api/telegram/connect", {
+                    method: personalUsername && !token.trim() ? "PATCH" : "POST",
+                    headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token: token.trim() }),
+                });
+                const result = await response.json() as { username?: string; error?: string };
+                if (!response.ok || !result.username) throw new Error(result.error ?? "Не удалось подключить личного бота.");
+                setToken("");
+                setPersonalUsername(result.username);
+                setBotUsername(result.username);
+                const { data, error } = await supabase.from("telegram_businesses")
+                    .select("id, owner_id, business_name, start_code, active").single();
+                if (error) throw error;
+                setSetup(data as TelegramBusiness);
+                setNotice("Личный бот подключён. Его диалоги, каталог и заявки относятся только к вашему магазину.");
+                return;
+            }
             const { data: userData, error: userError } =
                 await supabase.auth.getUser();
             if (userError) throw userError;
@@ -181,7 +215,7 @@ export function TelegramChannel({ businessName }: { businessName: string }) {
     }
 
     const telegramLink =
-        setup && botUsername
+        setup && botUsername && (personalUsername || mode === "shared")
             ? `https://t.me/${botUsername}?start=${setup.start_code}`
             : null;
 
@@ -190,13 +224,26 @@ export function TelegramChannel({ businessName }: { businessName: string }) {
             <div className="telegram-channel-heading">
                 <span className="channel-card-icon"><Send size={18} /></span>
                 <div>
-                    <h2>{t("One shared FloralAI Telegram bot")}</h2>
-                    <p>Клиенты переходят по вашей ссылке. Бот учитывает сохранённый профиль бизнеса, предлагает товары из каталога и собирает заявки.</p>
+                    <h2>Telegram-помощник вашего магазина</h2>
+                    <p>Ваш каталог, правила и отдельные диалоги с клиентами. Ассистент консультирует и помогает оформить заявку.</p>
                 </div>
                 <span className={`channel-state ${setup?.active ? "channel-available" : ""}`}>
                     {t(loading ? "Loading..." : setup?.active ? "CONNECTED" : "NOT CONNECTED")}
                 </span>
             </div>
+
+            <div className="business-options" role="group" aria-label="Способ подключения Telegram">
+                <button type="button" className="business-option" aria-pressed={mode === "personal"} disabled={saving} onClick={() => { setMode("personal"); setError(""); }}>Свой бот магазина</button>
+                <button type="button" className="business-option" aria-pressed={mode === "shared"} disabled={saving || Boolean(personalUsername)} onClick={() => { setMode("shared"); setError(""); }}>Общий FloralAI по личной ссылке</button>
+            </div>
+            {mode === "personal" && <div className="telegram-channel-notes">
+                {personalUsername ? <p>Подключён @{personalUsername}. Клиенты могут писать ему напрямую. Для обновления доступа вставьте новый токен этого же бота.</p>
+                    : <p>Откройте <a href="https://t.me/BotFather" target="_blank" rel="noreferrer">@BotFather</a> в Telegram, отправьте /newbot, задайте название магазина и скопируйте выданный токен. У бота будет собственное имя и ссылка.</p>}
+                <label className="business-field" htmlFor="telegram-personal-token">Токен от BotFather{personalUsername ? " · только для обновления" : ""}
+                    <input id="telegram-personal-token" type="password" value={token} onChange={(event) => setToken(event.target.value)} autoComplete="off" spellCheck={false} maxLength={128} placeholder="123456789:AA…" disabled={saving || !personalEnabled} />
+                </label>
+                <p>{personalEnabled ? "Токен хранится на сервере в зашифрованном виде и после сохранения не показывается." : "Подключение своего бота требует настройки сервера. Пока можно использовать общую ссылку FloralAI."}</p>
+            </div>}
 
             {(error || notice) && (
                 <p className={error ? "auth-error" : "auth-notice"} role={error ? "alert" : "status"}>
@@ -220,7 +267,8 @@ export function TelegramChannel({ businessName }: { businessName: string }) {
             )}
 
             <div className="telegram-channel-notes">
-                <p>Ассистент уточняет повод, бюджет, имя, телефон, адрес и время доставки. После подтверждения клиентом заявка появится в разделе «Заявки».</p>
+                <p>{aiEnabled ? "AI-консультант включён: учитывает контекст диалога, каталог и базу знаний магазина." : "Работают оформление заявок, ответы по данным магазина и встроенные советы флориста. Свободные AI-консультации требуют включения AI на сервере."}</p>
+                <p>Вопрос во время оформления не сбрасывает черновик. После подтверждения клиентом заявка появится в разделе «Заявки».</p>
                 <p>Изменения профиля доступны боту после нажатия «Сохранить данные». В каталоге и описании бизнеса указывайте информацию для клиентов.</p>
             </div>
 
@@ -229,7 +277,7 @@ export function TelegramChannel({ businessName }: { businessName: string }) {
                     type="button"
                     className="button button-blue"
                     onClick={() => void connect()}
-                    disabled={loading || saving || !businessName.trim()}
+                    disabled={loading || saving || !businessName.trim() || (mode === "personal" && (!personalEnabled || (!personalUsername && !token.trim())))}
                 >
                     {saving
                         ? t("Connecting...")

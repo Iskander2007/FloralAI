@@ -41,3 +41,12 @@ test("rejects invalid fields and excessive business knowledge", () => {
         assert.equal(parseBusinessProfile(invalid), null);
     }
 });
+
+test("assistant settings persist with strict limits and advice is enabled by default", () => {
+    const saved = parseBusinessProfile({ ...profile, assistantGreeting: " Добро пожаловать! ", assistantKnowledge: "Вопрос: Есть открытка?\nОтвет: Бесплатно.", allowFlowerAdvice: false });
+    assert.equal(saved.assistantGreeting, "Добро пожаловать!");
+    assert.match(saved.assistantKnowledge, /Бесплатно/);
+    assert.equal(saved.allowFlowerAdvice, false);
+    assert.equal(parseBusinessProfile(profile).allowFlowerAdvice, true);
+    for (const extra of [{ assistantGreeting: "x".repeat(501) }, { assistantKnowledge: "x".repeat(6001) }, { allowFlowerAdvice: "false" }]) assert.equal(parseBusinessProfile({ ...profile, ...extra }), null);
+});

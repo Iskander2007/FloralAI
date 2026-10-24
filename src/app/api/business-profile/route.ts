@@ -39,7 +39,7 @@ export async function PUT(request: Request) {
     let body: unknown;
     try {
         const raw = await request.text();
-        if (raw.length > 32_768) return NextResponse.json({ error: "Описание слишком большое." }, { status: 413 });
+        if (raw.length > 49_152) return NextResponse.json({ error: "Описание слишком большое." }, { status: 413 });
         body = JSON.parse(raw);
     } catch { return NextResponse.json({ error: "Не удалось прочитать данные бизнеса." }, { status: 400 }); }
     const profile = parseBusinessProfile(body && typeof body === "object" && "profile" in body ? body.profile : null);

@@ -84,8 +84,6 @@ export function BusinessProfileEditor({ profile, onSaved, submitLabel = "Сох�
             deliveryAreas: draft.deliveryAreas?.trim() ?? "",
             deliveryFeeKzt: fee,
             orderPolicy: draft.orderPolicy?.trim() ?? "",
-            language: "Russian",
-            tone: "Friendly",
             acceptOrdersOffline: true,
         };
 
@@ -163,6 +161,17 @@ export function BusinessProfileEditor({ profile, onSaved, submitLabel = "Сох�
                 <div className="business-quick-group"><h3>Что учесть при оформлении?</h3><Options label="Условия магазина" values={policyOptions} selected={policies} onSelect={(value) => update("orderPolicy", toggleBusinessOption(policies, value).join("\n"))} />
                     <details className="business-custom-details"><summary>Написать свои условия{policies.some((value) => !policyOptions.includes(value)) ? " · есть свой текст" : ""}</summary><label className="business-field">Правила вашего магазина<textarea value={draft.orderPolicy ?? ""} onChange={(event) => update("orderPolicy", event.target.value)} rows={3} maxLength={3000} placeholder="Срок подготовки, замены цветов и другие пожелания" /></label></details>
                 </div>
+            </fieldset>
+            <fieldset className="business-section" disabled={saving}>
+                <legend><ClipboardList size={18} aria-hidden="true" /> 4. Персональный помощник</legend>
+                <div className="business-fields">
+                    <label className="business-field">Язык ответов<select value={draft.language} onChange={(event) => update("language", event.target.value as BusinessProfile["language"])}><option value="Russian">Русский</option><option value="Kazakh">Қазақша</option><option value="English">English</option></select></label>
+                    <label className="business-field">Стиль общения<select value={draft.tone} onChange={(event) => update("tone", event.target.value as BusinessProfile["tone"])}><option value="Friendly">Дружелюбный</option><option value="Professional">Деловой</option><option value="Premium">Сдержанный, премиальный</option><option value="Casual">Неформальный</option></select></label>
+                </div>
+                <p className="business-field-hint">Язык и стиль применяются к AI-консультациям. Оформление заявки и встроенные советы пока на русском.</p>
+                <label className="business-field">Приветствие вашего бота<input value={draft.assistantGreeting ?? ""} onChange={(event) => update("assistantGreeting", event.target.value)} maxLength={500} placeholder="Добро пожаловать в наш цветочный магазин!" /></label>
+                <label className="business-field">База знаний магазина<textarea value={draft.assistantKnowledge ?? ""} onChange={(event) => update("assistantKnowledge", event.target.value)} maxLength={6000} rows={7} placeholder={"Вопрос: Можно ли заменить цветы в букете?\nОтвет: Состав согласовываем с клиентом до сборки.\n\nВопрос: Есть ли открытка?\nОтвет: Укажите реальные условия вашего магазина."} /><span className="business-field-hint">Добавьте реальные условия про упаковку, открытки, самовывоз, замены и претензии. Для ответов без AI используйте пары «Вопрос:» и «Ответ:». Не добавляйте пароли и внутренние сведения — эту информацию бот сообщает клиентам.</span></label>
+                <label className="business-field"><span><input type="checkbox" checked={draft.allowFlowerAdvice !== false} onChange={(event) => update("allowFlowerAdvice", event.target.checked)} /> Советы флориста по уходу, выбору и оформлению цветов</span><span className="business-field-hint">Общие рекомендации. Наличие цветов, сроки и особые условия всегда подтверждает магазин.</span></label>
             </fieldset>
             <div className="business-save-bar">
                 <div className="business-save-feedback" aria-live="polite">{error && <p className="business-feedback business-feedback-error" role="alert">{error}</p>}{notice && <p className="business-feedback business-feedback-success"><Check size={16} aria-hidden="true" />{notice}</p>}</div>

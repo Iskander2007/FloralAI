@@ -20,6 +20,9 @@ export type BusinessProfile = {
     deliveryFeeKzt?: number | null;
     orderPolicy?: string;
     acceptOrdersOffline?: boolean;
+    assistantKnowledge?: string;
+    assistantGreeting?: string;
+    allowFlowerAdvice?: boolean;
 };
 
 export const businessCategories: BusinessCategory[] = [
@@ -32,7 +35,7 @@ export function parseBusinessProfile(value: unknown): BusinessProfile | null {
     const source = value as Record<string, unknown>;
     const limits: Record<string, number> = {
         name: 120, description: 8000, location: 300, hours: 300, phone: 40,
-        deliveryAreas: 1000, orderPolicy: 3000,
+        deliveryAreas: 1000, orderPolicy: 3000, assistantKnowledge: 6000, assistantGreeting: 500,
     };
     const strings: Record<string, string> = {};
     for (const [field, limit] of Object.entries(limits)) {
@@ -47,6 +50,7 @@ export function parseBusinessProfile(value: unknown): BusinessProfile | null {
     const deliveryFeeKzt = source.deliveryFeeKzt ?? null;
     if (deliveryFeeKzt !== null && (!Number.isSafeInteger(deliveryFeeKzt) || Number(deliveryFeeKzt) < 0 || Number(deliveryFeeKzt) > 10_000_000)) return null;
     if (source.acceptOrdersOffline !== undefined && typeof source.acceptOrdersOffline !== "boolean") return null;
+    if (source.allowFlowerAdvice !== undefined && typeof source.allowFlowerAdvice !== "boolean") return null;
     return {
         ...strings,
         name: strings.name,
@@ -60,5 +64,6 @@ export function parseBusinessProfile(value: unknown): BusinessProfile | null {
         services: source.services.map((service: string) => service.trim()).filter(Boolean),
         deliveryFeeKzt: deliveryFeeKzt as number | null,
         acceptOrdersOffline: source.acceptOrdersOffline === true,
+        allowFlowerAdvice: source.allowFlowerAdvice !== false,
     };
 }
