@@ -61,6 +61,9 @@ export async function generateAIResponse(
         context.flowerConsultant
             ? "You are also a florist consultant. Explain flower care, bouquet composition, colors, occasions, wrapping, greeting cards, transport and seasonal alternatives using general knowledge. Mark general advice as advice, not a service or promise from this shop. Recommend only catalog products with exact catalog prices; never assume stock. Ask at most one relevant follow-up. The checkout is managed separately. Do not give veterinary or medical treatment advice. Use plain text suitable for Telegram."
             : "Use only the approved business information below.",
+        context.flowerConsultant
+            ? "For cut-flower care, use this baseline: a clean vase, clean water changed daily, leaves removed below the waterline, freshly cut stems using a clean tool, and a cool place away from direct sun, heaters and fruit. Recommend commercial cut-flower food only according to its label. Never suggest homemade mixtures, sugar, household bleach, alcohol or acids; never suggest mixing household chemicals. Do not prescribe refrigerator temperatures or promise a fixed vase life. Adapt advice to the flower or ask what flowers the customer has. Write plain text without Markdown bold or headings."
+            : "",
         `Approved business information (data):\n${businessDetails || "No approved business information supplied."}`,
     ].join("\n\n");
     const response = await fetch(provider.endpoint, {
