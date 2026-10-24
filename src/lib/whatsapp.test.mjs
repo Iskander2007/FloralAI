@@ -8,7 +8,7 @@ const moduleUrl = (source) => `data:text/javascript;base64,${Buffer.from(source)
 const compile = (source) => ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } }).outputText;
 const lib = await import(moduleUrl(compile(await readFile(new URL("./whatsapp.ts", import.meta.url), "utf8"))));
 const reply = await import(moduleUrl(compile(await readFile(new URL("./whatsapp-reply.ts", import.meta.url), "utf8"))
-    .replaceAll('"@/lib/ai"', JSON.stringify(moduleUrl("export async function generateAIResponse() { throw new Error('Unexpected paid model call'); }")))));
+    .replaceAll('"@/lib/ai"', JSON.stringify(moduleUrl("export const isLiveAIConfigured = () => false; export async function generateAIResponse() { throw new Error('Unexpected paid model call'); }")))));
 const originalEnv = { ...process.env };
 after(() => { process.env = originalEnv; });
 

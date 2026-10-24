@@ -1,4 +1,4 @@
-import { generateAIResponse, type ChatTurn } from "@/lib/ai";
+import { generateAIResponse, isLiveAIConfigured, type ChatTurn } from "@/lib/ai";
 import type { BusinessProfile } from "@/lib/business";
 import { runSalesTurn, type SalesProduct, type SalesState, type SalesTurn } from "@/lib/sales-assistant";
 
@@ -77,7 +77,7 @@ export async function runTelegramTurn(input: {
     if (/оператор|менеджер|сотрудник|позвонить|связаться|оплат|перевод|реквизит|данные карты/i.test(message)) return runSalesTurn({ ...input, message: `${message}?` });
 
     let reply = faq;
-    if (!reply && process.env.USE_MOCK_AI === "false" && process.env.OPENAI_API_KEY
+    if (!reply && isLiveAIConfigured()
         && (input.aiDeadline === undefined || Date.now() + 20_000 <= input.aiDeadline)) {
         try {
             reply = await generateAIResponse(message, {

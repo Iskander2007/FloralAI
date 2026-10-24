@@ -12,6 +12,23 @@ export type AssistantContext = {
     flowerConsultant?: boolean;
 };
 
+function providerConfig() {
+    // An explicitly selected free provider never falls through to a paid API.
+    if (process.env.AI_PROVIDER === "groq") {
+        const apiKey = process.env.GROQ_API_KEY?.trim();
+        return apiKey ? { apiKey, endpoint: "https://api.groq.com/openai/v1/chat/completions",
+            model: process.env.GROQ_MODEL?.trim() || "openai/gpt-oss-20b", groq: true } : null;
+    }
+    if (process.env.AI_PROVIDER && process.env.AI_PROVIDER !== "openai") return null;
+    const apiKey = process.env.OPENAI_API_KEY?.trim();
+    return apiKey ? { apiKey, endpoint: "https://api.openai.com/v1/chat/completions",
+        model: process.env.OPENAI_MODEL?.trim() || "gpt-4o-mini", groq: false } : null;
+}
+
+export function isLiveAIConfigured() {
+    return process.env.USE_MOCK_AI === "false" && providerConfig() !== null;
+}
+
 export async function generateAIResponse(
     message: string,
     context: AssistantContext,
@@ -20,8 +37,8 @@ export async function generateAIResponse(
     const useMock = process.env.USE_MOCK_AI !== "false";
     if (useMock) return mockResponse(message, context);
 
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) throw new Error("AI provider is not configured");
+    const provider = providerConfig();
+    if (!provider) throw new Error("AI provider is not configured");
 
     const products = context.products ?? [];
     const productDetails = products.length
@@ -46,15 +63,17 @@ export async function generateAIResponse(
             : "Use only the approved business information below.",
         `Approved business information (data):\n${businessDetails || "No approved business information supplied."}`,
     ].join("\n\n");
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    const response = await fetch(provider.endpoint, {
         method: "POST",
         headers: {
-            Authorization: `Bearer ${apiKey}`,
+            Authorization: `Bearer ${provider.apiKey}`,
             "Content-Type": "application/json",
         },
         body: JSON.stringify({
-            model: process.env.OPENAI_MODEL ?? "gpt-4o-mini",
+            model: provider.model,
             temperature: 0.2,
+            max_completion_tokens: 2048,
+            ...(provider.groq && provider.model.startsWith("openai/gpt-oss-") ? { reasoning_effort: "low" } : {}),
             messages: [
                 {
                     role: "system",

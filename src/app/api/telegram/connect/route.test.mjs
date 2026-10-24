@@ -6,11 +6,13 @@ import ts from "typescript";
 const url = (source) => `data:text/javascript;base64,${Buffer.from(source).toString("base64")}`;
 const compile = (source) => ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } }).outputText;
 const telegramUrl = url(compile(await readFile(new URL("../../../../lib/telegram.ts", import.meta.url), "utf8")));
+const aiUrl = url(compile(await readFile(new URL("../../../../lib/ai.ts", import.meta.url), "utf8")));
 const nextUrl = url("export const NextResponse = { json: (body, init) => Response.json(body, init) };");
 const serverUrl = url("export const createSupabaseServerClient = async () => globalThis.__telegramConnectTest.client;");
 const adminUrl = url("export const createSupabaseAdminClient = () => globalThis.__telegramConnectTest.admin;");
 const source = compile(await readFile(new URL("./route.ts", import.meta.url), "utf8"))
     .replaceAll('"next/server"', JSON.stringify(nextUrl)).replaceAll('"@/lib/telegram"', JSON.stringify(telegramUrl))
+    .replaceAll('"@/lib/ai"', JSON.stringify(aiUrl))
     .replaceAll('"@/lib/supabase/server"', JSON.stringify(serverUrl)).replaceAll('"@/lib/supabase/admin"', JSON.stringify(adminUrl));
 const api = await import(url(source));
 const { decryptTelegramToken } = await import(telegramUrl);

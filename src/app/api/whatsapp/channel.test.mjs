@@ -12,6 +12,7 @@ const next = url("export const NextResponse = { json: (body, init) => new Respon
 const server = url("export async function createSupabaseServerClient() { return globalThis.__waTest.client; }");
 const admin = url("export function createSupabaseAdminClient() { globalThis.__waTest.adminCalls++; return globalThis.__waTest.admin; }");
 const business = url(await source("../../../lib/business.ts"));
+const ai = url(await source("../../../lib/ai.ts"));
 const whatsapp = url(await source("../../../lib/whatsapp.ts"));
 const reply = url("export async function answerWhatsAppMessage(message, profile, products, history) { const c=globalThis.__waTest; c.answers.push({message,profile,products,history}); return {reply:profile.name+': '+products.map(p=>p.name).join(', '),handoff:message==='оператор'}; }");
 const shared = url((await source("../../../lib/whatsapp-server.ts"))
@@ -23,6 +24,7 @@ async function route(file) {
     return import(url((await source(file)).replaceAll('"next/server"', JSON.stringify(next))
         .replaceAll('"@/lib/whatsapp"', JSON.stringify(whatsapp)).replaceAll('"@/lib/whatsapp-server"', JSON.stringify(shared))
         .replaceAll('"@/lib/business"', JSON.stringify(business)).replaceAll('"@/lib/supabase/admin"', JSON.stringify(admin))
+        .replaceAll('"@/lib/ai"', JSON.stringify(ai))
         .replaceAll('"@/lib/whatsapp-worker"', JSON.stringify(worker))));
 }
 const setup = await route("./setup/route.ts"), connect = await route("./connect/route.ts"),

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { encryptTelegramToken, personalTelegramSecret, telegramApi, telegramEncryptionKey } from "@/lib/telegram";
+import { isLiveAIConfigured } from "@/lib/ai";
 
 export const runtime = "nodejs";
 
@@ -23,7 +24,7 @@ export async function GET(request: Request) {
         .select("bot_id,username,business_id").eq("owner_id", auth.ownerId).maybeSingle();
     if (error) return NextResponse.json({ error: "Не удалось загрузить персонального бота." }, { status: 503 });
     return NextResponse.json({ connection: data, personalEnabled: Boolean(telegramEncryptionKey()),
-        aiEnabled: process.env.USE_MOCK_AI === "false" && Boolean(process.env.OPENAI_API_KEY) },
+        aiEnabled: isLiveAIConfigured() },
     { headers: { "Cache-Control": "private, no-store" } });
 }
 

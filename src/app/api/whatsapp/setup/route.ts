@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { getWhatsAppConfig, digestNonce } from "@/lib/whatsapp";
 import { whatsappAccess, whatsappBody, whatsappOwner, whatsappPublicColumns } from "@/lib/whatsapp-server";
 import { parseBusinessProfile } from "@/lib/business";
+import { isLiveAIConfigured } from "@/lib/ai";
 
 export const runtime = "nodejs";
 
@@ -14,7 +15,7 @@ export async function GET(request: Request) {
         .select(whatsappPublicColumns).eq("owner_id", auth.ownerId).maybeSingle();
     if (error) return NextResponse.json({ error: "Не удалось загрузить подключение WhatsApp." }, { status: 503 });
     return NextResponse.json({ available: !!config, connection, coexistence: config?.coexistence ?? false,
-        replyMode: process.env.USE_MOCK_AI === "false" && process.env.OPENAI_API_KEY ? "ai" : "faq" }, {
+        replyMode: isLiveAIConfigured() ? "ai" : "faq" }, {
         headers: { "Cache-Control": "private, no-store" },
     });
 }

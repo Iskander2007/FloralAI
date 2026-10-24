@@ -1,5 +1,5 @@
 import type { BusinessProfile } from "@/lib/business";
-import { generateAIResponse, type ChatTurn } from "@/lib/ai";
+import { generateAIResponse, isLiveAIConfigured, type ChatTurn } from "@/lib/ai";
 import type { SalesProduct } from "@/lib/sales-assistant";
 
 export async function answerWhatsAppMessage(message: string, profile: BusinessProfile, products: SalesProduct[], history: ChatTurn[]) {
@@ -14,7 +14,7 @@ export async function answerWhatsAppMessage(message: string, profile: BusinessPr
         "Пока я понимаю текстовые сообщения. Напишите ваш вопрос или слово «оператор», чтобы связаться с сотрудником.",
         "I can read text messages. Please type your question, or say ‘agent’ to speak to the team.",
         "Әзірге мәтіндік хабарларды түсінемін. Сұрағыңызды жазыңыз немесе қызметкерді шақырыңыз.") };
-    if (process.env.USE_MOCK_AI === "false" && process.env.OPENAI_API_KEY) {
+    if (isLiveAIConfigured()) {
         const reply = await generateAIResponse(message, {
             businessName: profile.name, tone: profile.tone, language: profile.language,
             businessDescription: [profile.description, `Address: ${profile.location || "not provided"}`,
