@@ -13,13 +13,13 @@ const { config } = await import(`data:text/javascript;base64,${Buffer.from(compi
 const matches = (url) => unstable_doesMiddlewareMatch({ config, nextConfig: {}, url });
 
 test("public pages, callbacks and demo APIs render without the session refresh proxy", () => {
-    for (const path of ["/", "/signup", "/signup?plan=starter", "/login", "/login?error=auth_callback_failed", "/flower-shop", "/api/flower-assistant", "/auth/callback?code=example", "/api/telegram/webhook", "/_next/static/app.js"]) {
+    for (const path of ["/", "/signup", "/signup?plan=starter", "/login", "/login?error=auth_callback_failed", "/flower-shop", "/api/flower-assistant", "/auth/callback?code=example", "/api/telegram/webhook", "/api/whatsapp/webhook", "/api/whatsapp/retry", "/_next/static/app.js"]) {
         assert.equal(matches(path), false, path);
     }
 });
 
 test("all account pages and protected APIs still refresh session cookies", () => {
-    for (const path of ["/dashboard", "/dashboard/settings", "/onboarding", "/api/business-profile", "/api/chat", "/api/orders", "/api/billing", "/api/billing/trial", "/api/billing/payments/123", "/api/telegram/setup"]) {
+    for (const path of ["/dashboard", "/dashboard/settings", "/onboarding", "/api/business-profile", "/api/chat", "/api/orders", "/api/billing", "/api/billing/trial", "/api/billing/payments/123", "/api/telegram/setup", "/api/whatsapp/setup", "/api/whatsapp/connect", "/api/whatsapp/inbox"]) {
         assert.equal(matches(path), true, path);
     }
 });

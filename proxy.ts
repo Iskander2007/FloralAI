@@ -45,5 +45,8 @@ export const config = {
         "/api/orders/:path*",
         "/api/billing/:path*",
         "/api/telegram/setup/:path*",
+        "/api/whatsapp/setup/:path*",
+        "/api/whatsapp/connect/:path*",
+        "/api/whatsapp/inbox/:path*",
     ],
 };

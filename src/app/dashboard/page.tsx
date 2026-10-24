@@ -42,6 +42,7 @@ import {
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { ProductCatalog } from "@/components/product-catalog";
 import { TelegramChannel } from "@/components/telegram-channel";
+import { WhatsAppChannel } from "@/components/whatsapp-channel";
 import { BusinessProfileEditor } from "@/components/business-profile-editor";
 import { SalesOrders } from "@/components/sales-orders";
 import { SubscriptionBilling } from "@/components/subscription-billing";
@@ -968,6 +969,7 @@ export default function DashboardPage() {
                                             </p>
                                         </div>
                                     </div>
+                                    <WhatsAppChannel />
                                     <div className="channel-cards">
                                         {[
                                             {
@@ -975,12 +977,6 @@ export default function DashboardPage() {
                                                 detail: t("Embed a small chat on your website"),
                                                 icon: Globe2,
                                                 state: "AVAILABLE TO PREVIEW",
-                                            },
-                                            {
-                                                name: "WhatsApp",
-                                                detail: t("Connect your business WhatsApp number"),
-                                                icon: MessageCircle,
-                                                state: "NOT CONNECTED",
                                             },
                                             {
                                                 name: "Instagram",
@@ -1033,7 +1029,7 @@ export default function DashboardPage() {
                                         businessName={business?.name ?? ""}
                                     />
                                     <div className="integration-disclosure">
-                                        <Sparkles size={15} /> Telegram-бот сохраняет заявки клиентов в кабинете. WhatsApp и другие каналы пока не подключены.
+                                        <Sparkles size={15} /> Telegram-бот сохраняет заявки в кабинете. WhatsApp подключается к собственному номеру бизнеса через Meta; состояние подключения показано выше.
                                     </div>
                                 </>
                             )}
